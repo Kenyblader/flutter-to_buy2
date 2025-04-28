@@ -14,6 +14,8 @@ dependencies {
 
     // For AppWidgets support
     implementation("androidx.glance:glance-appwidget:1.1.1")
+
+    implementation ("com.google.code.gson:gson:2.10.1")
 }
 
 android {

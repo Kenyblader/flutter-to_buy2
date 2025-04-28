@@ -32,6 +32,11 @@
                 android:resource="@xml/listify_widget_info" />
         </receiver>
 
+        <service
+            android:name=".BuyListWidgetService"
+            android:permission="android.permission.BIND_REMOTEVIEWS"
+            android:exported="false" />
+
         <activity
             android:name=".MainActivity"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"

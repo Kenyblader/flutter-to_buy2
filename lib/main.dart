@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' as riverpod;
 import 'package:home_widget/home_widget.dart';
 import 'package:provider/provider.dart' as provider;
@@ -8,6 +9,7 @@ import 'package:to_buy/models/buy_list.dart';
 import 'package:to_buy/provider/theme_provider.dart';
 import 'package:to_buy/screens/home_screen.dart';
 import 'package:to_buy/screens/item_list_screen.dart';
+import 'package:to_buy/screens/list_screen.dart';
 import 'package:to_buy/screens/login_register_screen.dart';
 import 'package:to_buy/widgets/listify_widget.dart';
 import 'package:to_buy/widgets/shared_preferences_storage.dart';
@@ -43,8 +45,36 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class AuthGate extends StatelessWidget {
+class AuthGate extends StatefulWidget {
   const AuthGate({super.key});
+  @override
+  State<StatefulWidget> createState() => AuthGateStata();
+}
+
+class AuthGateStata extends State<AuthGate> {
+  static final platform= MethodChannel("ListifyWidgetRoutes");
+
+
+  @override
+  void initState() {
+    super.initState();
+    _checkWidgetIntent();
+  }
+
+  Future<void> _checkWidgetIntent() async {
+    try {
+      final result = await platform.invokeMethod('getWidgetIntentExtras');
+      if (result != null) {
+        final targetPage = result['target_page'] as String?;
+        if (targetPage != null) {
+            Navigator.push(context, MaterialPageRoute(builder: (context) => ListScreen()));
+
+        }
+      }
+    } catch (e) {
+      print('Erreur lors de la récupération des extras : $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

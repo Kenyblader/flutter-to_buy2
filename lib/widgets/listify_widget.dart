@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/cupertino.dart';
 import 'package:home_widget/home_widget.dart';
 import 'package:to_buy/models/buy_list.dart';
@@ -12,13 +14,24 @@ class ListifyWidgetManager {
 
   static updateHeadline(BuyList newHeadline)  {
     // Add from here
-    var buylist=  fireStore.getBuyLists();
-    buylist.listen((onData){
-      print("avant home update");
-      HomeWidget.saveWidgetData("names", onData.map((e) => e.name).toList().toString());
-      print("apres home update");
+    // var buylist=  fireStore.getBuyLists();
+    // buylist.listen((onData){
+    //   print("avant home update");
+    //   HomeWidget.saveWidgetData<String>("names", jsonEncode(onData.map((toElement)=>toElement.toJson()).toList()));
+    //   print("apres home update");
+    //
+    // });
 
-    });
+    var buylist=[
+      BuyList(name: "liste1", description: "description1",id: "1"),
+
+      BuyList(name: "liste2", description: "description2",id: "2"),
+    ];
+print ('==========================================================================================');
+    print("avant home update:${buylist[0].id}");
+
+    HomeWidget.saveWidgetData<String>("names", jsonEncode(buylist.map((toElement)=>toElement.toJson()).toList()));
+
     // Save the headline data to the widget
     
     HomeWidget.updateWidget(

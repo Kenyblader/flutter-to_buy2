@@ -6,7 +6,10 @@ import android.content.Context
 import android.util.Log
 import org.json.JSONArray
 import android.widget.RemoteViews
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import es.antonborri.home_widget.HomeWidgetPlugin
+import kotlin.math.log
 
 class BuyListWidgetService : RemoteViewsService() {
     override fun onGetViewFactory(intent: Intent): RemoteViewsFactory {
@@ -16,14 +19,18 @@ class BuyListWidgetService : RemoteViewsService() {
 
 class BuyListRemoteViewsFactory(private val context: Context) : RemoteViewsService.RemoteViewsFactory {
 
-    private var buyListNames: List<String> = emptyList()
+    private var buyListNames: List<BuyList> = emptyList()
 
     override fun onCreate() {
-        loadBuyLists()
+        var x=loadBuyLists();
+        Log.d("BuyListFactory",x[0].name);
+        buyListNames=x;
     }
 
     override fun onDataSetChanged() {
-        loadBuyLists()
+        var x=loadBuyLists();
+        Log.d("BuyListFactory",x[0].name);
+        buyListNames=x;
     }
 
     override fun onDestroy() {
@@ -33,8 +40,19 @@ class BuyListRemoteViewsFactory(private val context: Context) : RemoteViewsServi
     override fun getCount(): Int = buyListNames.size
 
     override fun getViewAt(position: Int): RemoteViews {
-        val views = RemoteViews(context.packageName, R.layout.item_buy_list)
-        views.setTextViewText(R.id.item_text, buyListNames[position])
+        val views = RemoteViews(context.packageName, R.layout.item_buy_list);
+        views.setTextViewText(R.id.item_title, buyListNames[position].name);
+        views.setTextViewText(R.id.item_description, buyListNames[position].description);
+        try{
+            val fillInIntent = Intent().apply {
+                putExtra("target_page", "list_details")
+                putExtra("list_id", buyListNames[position].id.toString())
+            }
+            views.setOnClickFillInIntent(R.id.item_title, fillInIntent);
+            views.setOnClickFillInIntent(R.id.item_icon, fillInIntent);
+        }catch (e: Exception){
+            Log.e("BuyListRemoteViewsFactory", "getViewAt error: ${e.message}",e);
+        }
         return views
     }
 
@@ -43,18 +61,14 @@ class BuyListRemoteViewsFactory(private val context: Context) : RemoteViewsServi
     override fun getItemId(position: Int): Long = position.toLong()
     override fun hasStableIds(): Boolean = true
 
-    private fun loadBuyLists() {
-        val prefs = HomeWidgetPlugin.getData(context);
-        val jsonString = prefs.getString("names", "[]")
-        Log.d("ListifyWidget", "Chargement des listes : $jsonString")
-        val names = mutableListOf<String>()
-        jsonString?.let {
-            val jsonArray = JSONArray(it)
-            for (i in 0 until jsonArray.length()) {
-                names.add(jsonArray.getString(i))
-            }
-        }
-        buyListNames = names
+    private fun loadBuyLists(): List<BuyList> {
+        Log.d("BuyListRemoteViewsFactory", "loadBuyLists called")
+        val data = HomeWidgetPlugin.getData(context);
+        val names=data.getString("names", "[]");
+        val gson=Gson();
+        val type=object: TypeToken<List<BuyList>>(){}.type;
+        Log.d("BuyListRemoteViewsFactory", "names: $names");
+        return gson.fromJson(names,type);
     }
 }
 

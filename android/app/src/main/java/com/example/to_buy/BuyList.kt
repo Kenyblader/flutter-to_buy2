@@ -15,7 +15,7 @@ data class BuyItem(
 }
 
 data class BuyList(
-    val id: String = UUID.randomUUID().toString(),
+    val id: String,
     val name: String,
     val description: String,
     val date: Date = Date(),

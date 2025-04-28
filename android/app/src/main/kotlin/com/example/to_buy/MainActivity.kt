@@ -13,55 +13,31 @@ import io.flutter.plugin.common.MethodChannel
 
 
 class MainActivity : FlutterActivity() {
-    /// A communication channel identifier used by Flutter and the native code to exchange messages. In this case, it is called storageChannel and is used for widget storage and update operations.
-    private val storageChannel = "ListifyStorageWidget"
+    private val CHANNEL = "ListifyWidgetRoutes"
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-
-        StorageHelper.initialize(context)
-
-        MethodChannel(
-            flutterEngine.dartExecutor.binaryMessenger,
-            storageChannel
-        ).setMethodCallHandler { call, result ->
-            when (call.method) {
-                "setValue" -> {
-                    val key = call.argument<String>("key")
-                    val value = call.argument<Any>("value")
-
-                    if (key != null && value != null) {
-                        try {
-                            StorageHelper.setValue(key, value)
-                            updateWidget(context)
-                            result.success(null)
-                        } catch (e: IllegalArgumentException) {
-                            result.error("INVALID_VALUE", "Unsupported value type", null)
-                        }
-                    } else {
-                        result.error("INVALID_ARGUMENTS", "Key or value is missing", null)
-                    }
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
+            if (call.method == "getWidgetIntentExtras") {
+                val extras = intent.extras
+                if (extras != null) {
+                    val targetPage = extras.getString("target_page")
+                    val listId = extras.getString("list_id")
+                    result.success(mapOf(
+                        "target_page" to targetPage,
+                        "list_id" to listId,
+                    ))
+                } else {
+                    result.success(null)
                 }
-                else -> {
-                    result.error("UNKNOWN_METHOD", "Method not implemented", null)
-                }
+            } else {
+                result.notImplemented()
             }
         }
     }
 
-    private fun updateWidget(context: Context) {
-        val appWidgetManager = AppWidgetManager.getInstance(context)
-        val componentName = ComponentName(context, ListifyWidget::class.java)
-
-        val appWidgetIds = appWidgetManager.getAppWidgetIds(componentName)
-
-        if (appWidgetIds.isNotEmpty()) {
-            val intent = Intent(context, ListifyWidget::class.java).apply {
-                action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
-                putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, appWidgetIds)
-            }
-
-            context.sendBroadcast(intent)
-        }
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent) // Met à jour l'intent pour les clics ultérieurs
     }
 }
