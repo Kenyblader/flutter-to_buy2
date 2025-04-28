@@ -15,7 +15,11 @@
             <data android:mimeType="text/plain" />
         </intent>
     </queries>
-
+    <!-- Permissions -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+    <uses-permission android:name="android.permission.WAKE_LOCK"/>
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
     <application
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
@@ -31,6 +35,10 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/listify_widget_info" />
         </receiver>
+        <service
+            android:name=".FloatingWidgetService"
+            android:enabled="true"
+            android:exported="false" />
 
         <activity
             android:name=".MainActivity"
