@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "906449779436",
+    "project_id": "tobuy-ce2e9",
+    "storage_bucket": "tobuy-ce2e9.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:906449779436:android:afb92cae5f058de04cc3c9",
+        "android_client_info": {
+          "package_name": "com.example.to_buy"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBp4tCA28jh-S3WIKcS_fg3CemSjYCbkdI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,25 @@
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "tobuy-ce2e9",
+          "appId": "1:906449779436:android:afb92cae5f058de04cc3c9",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "tobuy-ce2e9",
+          "configurations": {
+            "android": "1:906449779436:android:afb92cae5f058de04cc3c9",
+            "ios": "1:906449779436:ios:3194875a762770eb4cc3c9",
+            "macos": "1:906449779436:ios:3194875a762770eb4cc3c9",
+            "web": "1:906449779436:web:1a1b2ba1eccf066e4cc3c9",
+            "windows": "1:906449779436:web:243d26fed2f6286b4cc3c9"
+          }
+        }
+      }
+    }
+  }
+}
