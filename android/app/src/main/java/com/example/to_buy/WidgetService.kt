@@ -23,18 +23,17 @@ class BuyListRemoteViewsFactory(private val context: Context) : RemoteViewsServi
 
     override fun onCreate() {
         var x=loadBuyLists();
-        Log.d("BuyListFactory",x[0].name);
         buyListNames=x;
     }
 
     override fun onDataSetChanged() {
         var x=loadBuyLists();
-        Log.d("BuyListFactory",x[0].name);
+        Log.d("BuyListFactory", "Data set changed, new count: ${x.size}");
         buyListNames=x;
     }
 
     override fun onDestroy() {
-        buyListNames = emptyList()
+        buyListNames = emptyList();
     }
 
     override fun getCount(): Int = buyListNames.size
@@ -44,12 +43,7 @@ class BuyListRemoteViewsFactory(private val context: Context) : RemoteViewsServi
         views.setTextViewText(R.id.item_title, buyListNames[position].name);
         views.setTextViewText(R.id.item_description, buyListNames[position].description);
         try{
-            val fillInIntent = Intent().apply {
-                putExtra("target_page", "list_details")
-                putExtra("list_id", buyListNames[position].id.toString())
-            }
-            views.setOnClickFillInIntent(R.id.item_title, fillInIntent);
-            views.setOnClickFillInIntent(R.id.item_icon, fillInIntent);
+           
         }catch (e: Exception){
             Log.e("BuyListRemoteViewsFactory", "getViewAt error: ${e.message}",e);
         }

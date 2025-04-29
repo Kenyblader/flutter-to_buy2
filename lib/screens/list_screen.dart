@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:to_buy/models/buy_list.dart';
 import 'package:to_buy/screens/item_form_screen.dart';
 import 'package:to_buy/screens/list_detail_screen.dart';
+import 'package:to_buy/screens/propse_menu.dart';
 import 'package:to_buy/services/firestore_service.dart';
 
 class ListScreen extends StatefulWidget {
@@ -58,7 +59,17 @@ class _ListScreenState extends State<ListScreen> {
       appBar: AppBar(
         title: Text("Mes Listes"),
         backgroundColor: Colors.blueAccent,
-        actions: [IconButton(onPressed: () {}, icon: Icon(Icons.bolt))],
+        actions: [
+          IconButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (builder) => ProposeMenu()),
+              );
+            },
+            icon: Icon(Icons.bolt),
+          ),
+        ],
         iconTheme: IconThemeData(color: Colors.white),
       ),
       body: Padding(

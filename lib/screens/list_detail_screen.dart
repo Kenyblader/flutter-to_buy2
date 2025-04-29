@@ -89,7 +89,6 @@ class ListDetailScreen extends StatelessWidget {
                     try {
                       final newItem = BuyItem(
                         id: null,
-                        firestoreId: null,
                         name: nameController.text,
                         price: double.parse(priceController.text),
                         quantity: double.parse(quantityController.text),
@@ -199,7 +198,6 @@ class ListDetailScreen extends StatelessWidget {
                     try {
                       final updatedItem = BuyItem(
                         id: item.id,
-                        firestoreId: item.firestoreId,
                         name: nameController.text,
                         price: double.parse(priceController.text),
                         quantity: double.parse(quantityController.text),
@@ -375,7 +373,7 @@ class ListDetailScreen extends StatelessWidget {
                 ),
                 pw.SizedBox(height: 20),
                 pw.Text(
-                  'Total général : ${total.toStringAsFixed(2)} €',
+                  'Total général : ${total.toStringAsFixed(2)} Fcfa',
                   style: pw.TextStyle(
                     fontSize: 18,
                     fontWeight: pw.FontWeight.bold,
@@ -392,11 +390,23 @@ class ListDetailScreen extends StatelessWidget {
     );
     await file.writeAsBytes(await pdf.save());
 
-    // await Share.shareFiles(
-    //   [file.path],
-    //   subject: 'Liste de courses : ${list.name}',
-    //   text: 'Voici la liste de courses "${list.name}" en PDF.',
-    // );
+    final param = ShareParams(
+      text: 'Voici la liste de courses "${list.name}" en PDF.',
+      subject: 'Liste de courses : ${list.name}',
+      files: [XFile(file.path)],
+    );
+
+    var result = await SharePlus.instance.share(param);
+
+    if (result.status == ShareResultStatus.success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Liste partagée avec succès')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Erreur lors du partage de la liste')),
+      );
+    }
   }
 
   @override
@@ -418,221 +428,262 @@ class ListDetailScreen extends StatelessWidget {
           icon: const Icon(Icons.arrow_back, color: Colors.white),
         ),
       ),
-      body: StreamBuilder<List<BuyItem>>(
-        stream: FirestoreService().getItemsForList(listId),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            print('StreamBuilder: En attente des données pour listId: $listId');
+      body: FutureBuilder<Stream<List<BuyItem>>>(
+        future: FirestoreService().getItemsForList(listId),
+        builder: (context, futureSnapshot) {
+          if (futureSnapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
-          if (snapshot.hasError) {
-            print(
-              'StreamBuilder: Erreur lors du chargement des articles: ${snapshot.error}',
-            );
+          if (futureSnapshot.hasError) {
             return Center(
               child: Text(
-                'Erreur de chargement des articles: ${snapshot.error}',
+                'Erreur de chargement des articles: ${futureSnapshot.error}',
               ),
             );
           }
-          final items = snapshot.data ?? [];
-          print(
-            'StreamBuilder: ${items.length} articles chargés pour listId: $listId',
-          );
-          print(
-            'Articles: ${items.map((item) => "${item.name} (ID: ${item.firestoreId})").toList()}',
-          );
-          if (items.isEmpty) {
+          final stream = futureSnapshot.data;
+          if (stream == null) {
             return const Center(child: Text('Aucun article dans cette liste'));
           }
-          final total = items.fold(0.0, (sum, item) => sum + item.getTotal());
-          return Column(
-            children: [
-              Expanded(
-                child: ListView.builder(
-                  itemCount: items.length,
-                  itemBuilder: (context, index) {
-                    final item = items[index];
-                    final itemId = item.firestoreId ?? '';
-                    print(
-                      'Affichage de l\'article: ${item.name}, itemId: $itemId, listId: $listId',
-                    );
-                    return ListTile(
-                      title: Text(item.name),
-                      subtitle: Text(
-                        'Prix: ${item.price.toStringAsFixed(2)} Fcfa | Qté: ${item.quantity.toStringAsFixed(0)}',
-                      ),
-                      leading: Checkbox(
-                        value: item.isBuy,
-                        onChanged: (value) async {
-                          if (item.firestoreId == null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Erreur: ID de l\'article invalide',
-                                ),
-                              ),
-                            );
-                            return;
-                          }
-
-                          try {
-                            await FirestoreService().toggleItemStatus(
-                              listId,
-                              item.firestoreId!,
-                              value!,
-                            );
-                            // Update the local state of the item
-                            (context as Element)
-                                .markNeedsBuild(); // Trigger a rebuild to reflect changes
-                          } catch (e) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  'Erreur lors de la mise à jour: $e',
-                                ),
-                              ),
-                            );
-                          }
-                        },
-                      ),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.edit, color: Colors.blue),
-                            onPressed: () {
-                              if (itemId.isEmpty) {
-                                print(
-                                  'Erreur: ID de l\'article invalide pour ${item.name}',
-                                );
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      'Erreur: ID de l\'article invalide',
-                                    ),
-                                  ),
-                                );
-                                return;
-                              }
-                              _showEditItemDialog(context, item, itemId);
-                            },
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.delete, color: Colors.red),
-                            onPressed: () async {
-                              if (itemId.isEmpty) {
-                                print(
-                                  'Erreur: ID de l\'article invalide pour ${item.name}',
-                                );
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      'Erreur: ID de l\'article invalide',
-                                    ),
-                                  ),
-                                );
-                                return;
-                              }
-                              final confirm = await showDialog<bool>(
-                                context: context,
-                                builder:
-                                    (context) => AlertDialog(
-                                      title: const Text(
-                                        'Confirmer la suppression',
-                                      ),
-                                      content: Text(
-                                        'Voulez-vous supprimer l\'article "${item.name}" ?',
-                                      ),
-                                      actions: [
-                                        TextButton(
-                                          onPressed:
-                                              () =>
-                                                  Navigator.pop(context, false),
-                                          child: const Text('Annuler'),
-                                        ),
-                                        ElevatedButton(
-                                          onPressed:
-                                              () =>
-                                                  Navigator.pop(context, true),
-                                          child: const Text('Supprimer'),
-                                        ),
-                                      ],
-                                    ),
-                              );
-                              if (confirm == true) {
-                                try {
-                                  print(
-                                    'Lancement de la suppression de l\'article: $itemId, listId: $listId',
-                                  );
-                                  await FirestoreService().deleteItem(
-                                    listId,
-                                    itemId,
-                                  );
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        'Article supprimé avec succès',
-                                      ),
-                                    ),
-                                  );
-                                } catch (e) {
-                                  print(
-                                    'Erreur lors de la suppression de l\'article $itemId: $e',
-                                  );
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        'Erreur lors de la suppression: $e',
-                                      ),
-                                    ),
-                                  );
-                                }
-                              }
-                            },
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Text(
-                  'Total de la liste: ${total.toStringAsFixed(2)} €',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+          return StreamBuilder<List<BuyItem>>(
+            stream: stream,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                print(
+                  'StreamBuilder: En attente des données pour listId: $listId',
+                );
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (snapshot.hasError) {
+                print(
+                  'StreamBuilder: Erreur lors du chargement des articles: ${snapshot.error}',
+                );
+                return Center(
+                  child: Text(
+                    'Erreur de chargement des articles: ${snapshot.error}',
                   ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16.0,
-                  vertical: 8.0,
-                ),
-                child: ElevatedButton.icon(
-                  onPressed: () => _shareList(context, items),
-                  icon: const Icon(Icons.share),
-                  label: const Text('Partager la liste'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blueAccent,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+                );
+              }
+              final items = snapshot.data ?? [];
+              print(
+                'StreamBuilder: ${items.length} articles chargés pour listId: $listId',
+              );
+              print(
+                'Articles: ${items.map((item) => "${item.name} ").toList()}',
+              );
+              if (items.isEmpty) {
+                return const Center(
+                  child: Text('Aucun article dans cette liste'),
+                );
+              }
+              final total = items.fold(
+                0.0,
+                (sum, item) => sum + item.getTotal(),
+              );
+              return Column(
+                children: [
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: items.length,
+                      itemBuilder: (context, index) {
+                        final item = items[index];
+                        final itemId = item.id ?? '';
+                        print(
+                          'Affichage de l\'article: ${item.name}, itemId: $itemId, listId: $listId',
+                        );
+                        return ListTile(
+                          title: Text(item.name),
+                          subtitle: Text(
+                            'Prix: ${item.price.toStringAsFixed(2)} Fcfa | Qté: ${item.quantity.toStringAsFixed(0)}',
+                          ),
+                          leading: Checkbox(
+                            value: item.isBuy,
+                            onChanged: (value) async {
+                              if (item.id == null) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Erreur: ID de l\'article invalide',
+                                    ),
+                                  ),
+                                );
+                                return;
+                              }
+
+                              try {
+                                await FirestoreService().toggleItemStatus(
+                                  listId,
+                                  itemId,
+                                  value!,
+                                );
+                                // Update the local state of the item
+                                (context as Element)
+                                    .markNeedsBuild(); // Trigger a rebuild to reflect changes
+                              } catch (e) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      'Erreur lors de la mise à jour: $e',
+                                    ),
+                                  ),
+                                );
+                              }
+                            },
+                          ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.edit,
+                                  color: Colors.blue,
+                                ),
+                                onPressed: () {
+                                  if (itemId.isEmpty) {
+                                    print(
+                                      'Erreur: ID de l\'article invalide pour ${item.name}',
+                                    );
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          'Erreur: ID de l\'article invalide',
+                                        ),
+                                      ),
+                                    );
+                                    return;
+                                  }
+                                  _showEditItemDialog(context, item, itemId);
+                                },
+                              ),
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.delete,
+                                  color: Colors.red,
+                                ),
+                                onPressed: () async {
+                                  if (itemId.isEmpty) {
+                                    print(
+                                      'Erreur: ID de l\'article invalide pour ${item.name}',
+                                    );
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          'Erreur: ID de l\'article invalide',
+                                        ),
+                                      ),
+                                    );
+                                    return;
+                                  }
+                                  final confirm = await showDialog<bool>(
+                                    context: context,
+                                    builder:
+                                        (context) => AlertDialog(
+                                          title: const Text(
+                                            'Confirmer la suppression',
+                                          ),
+                                          content: Text(
+                                            'Voulez-vous supprimer l\'article "${item.name}" ?',
+                                          ),
+                                          actions: [
+                                            TextButton(
+                                              onPressed:
+                                                  () => Navigator.pop(
+                                                    context,
+                                                    false,
+                                                  ),
+                                              child: const Text('Annuler'),
+                                            ),
+                                            ElevatedButton(
+                                              onPressed:
+                                                  () => Navigator.pop(
+                                                    context,
+                                                    true,
+                                                  ),
+                                              child: const Text('Supprimer'),
+                                            ),
+                                          ],
+                                        ),
+                                  );
+                                  if (confirm == true) {
+                                    try {
+                                      print(
+                                        'Lancement de la suppression de l\'article: $itemId, listId: $listId',
+                                      );
+                                      await FirestoreService().deleteItem(
+                                        listId,
+                                        itemId,
+                                      );
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            'Article supprimé avec succès',
+                                          ),
+                                        ),
+                                      );
+                                    } catch (e) {
+                                      print(
+                                        'Erreur lors de la suppression de l\'article $itemId: $e',
+                                      );
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            'Erreur lors de la suppression: $e',
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                  }
+                                },
+                              ),
+                            ],
+                          ),
+                        );
+                      },
                     ),
                   ),
-                ),
-              ),
-            ],
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Text(
+                      'Total de la liste: ${total.toStringAsFixed(2)} €',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16.0,
+                      vertical: 8.0,
+                    ),
+                    child: ElevatedButton.icon(
+                      onPressed: () => _shareList(context, items),
+                      icon: const Icon(Icons.share),
+                      label: const Text('Partager la liste'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blueAccent,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
           );
         },
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showAddItemDialog(context),
-        backgroundColor: Colors.blueAccent,
-        child: const Icon(Icons.add, color: Colors.white),
+        backgroundColor:
+            themeProvider.themeData.floatingActionButtonTheme.backgroundColor,
+        child: const Icon(Icons.add),
       ),
     );
   }

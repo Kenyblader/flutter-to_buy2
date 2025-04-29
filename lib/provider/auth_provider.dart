@@ -1,10 +1,11 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:to_buy/models/user.dart';
+import 'package:to_buy/services/sqligthServices.dart';
 
 // Provider pour écouter l'état de l'utilisateur
-final authStateProvider = StreamProvider<User?>((ref) {
-  return FirebaseAuth.instance.authStateChanges();
-});
+// final authStateProvider = StreamProvider<User?>((ref) {
+//   return ref.watch(authProvider).authStateChanges;
+// });
 
 // Provider pour les opérations d'authentification
 final authProvider = Provider<AuthService>((ref) {
@@ -12,67 +13,34 @@ final authProvider = Provider<AuthService>((ref) {
 });
 
 class AuthService {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-
+  var service = DatabaseHelper.instance;
+  static String userId = '';
   // Connexion avec email et mot de passe
   Future<String?> signInWithEmail(String email, String password) async {
     try {
-      var s = await _auth
-          .signInWithEmailAndPassword(email: email, password: password)
-          .then((user) {
-            if (user.user == null) {
-              return 'invalid-credential'; // Identifiants invalides
-            } else if (user.user!.emailVerified == false) {
-              return 'email-not-verified'; // Email non vérifié
-            } else if (user.user!.emailVerified == true) {
-              return null;
-            } else {
-              return 'erreur reseaux';
-            }
-          });
-      print('auth logins: $s');
-      return s;
+      var user = await service.getUserByEmail(email, password);
+      if (user == null) {
+        return 'Aucun utilisateur trouvé avec cet email.';
+      }
+      userId = user.id.toString();
+      return null; // Pas d'erreur
       // Pas d'erreur
-    } on FirebaseAuthException catch (e) {
-      return _handleAuthError(e);
+    } on Exception catch (e) {
+      return e.toString();
     }
   }
 
   // Inscription avec email et mot de passe
   Future<String?> signUpWithEmail(String email, String password) async {
     try {
-      await _auth.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
+      await service.insertUser(User(email: email, password: password));
       // Déconnexion automatique après inscription
-      await _auth.signOut();
       return null; // Pas d'erreur
-    } on FirebaseAuthException catch (e) {
-      return _handleAuthError(e);
+    } on Exception catch (e) {
+      return e.toString();
     }
   }
 
   // Déconnexion
-  Future<void> signOut() async {
-    await _auth.signOut();
-  }
-
-  // Gestion des erreurs Firebase
-  String _handleAuthError(FirebaseAuthException e) {
-    switch (e.code) {
-      case 'invalid-email':
-        return 'L\'email est invalide.';
-      case 'user-not-found':
-        return 'Aucun utilisateur trouvé avec cet email.';
-      case 'wrong-password':
-        return 'Mot de passe incorrect.';
-      case 'email-already-in-use':
-        return 'Cet email est déjà utilisé.';
-      case 'weak-password':
-        return 'Le mot de passe est trop faible.';
-      default:
-        return 'Une erreur s\'est produite : ${e.message}';
-    }
-  }
+  Future<void> signOut() async {}
 }

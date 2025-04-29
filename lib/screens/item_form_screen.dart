@@ -63,9 +63,7 @@ class _ItemFormState extends State<ItemFormScreen> {
                 ),
               )
               .toList();
-
       final buyList = BuyList(
-        id: null,
         name: _nameController.text,
         description: _descriptionController.text,
         items: items,

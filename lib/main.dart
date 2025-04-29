@@ -3,23 +3,24 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' as riverpod;
-import 'package:home_widget/home_widget.dart';
 import 'package:provider/provider.dart' as provider;
 import 'package:to_buy/models/buy_list.dart';
 import 'package:to_buy/provider/theme_provider.dart';
 import 'package:to_buy/screens/home_screen.dart';
-import 'package:to_buy/screens/item_list_screen.dart';
 import 'package:to_buy/screens/list_screen.dart';
 import 'package:to_buy/screens/login_register_screen.dart';
+import 'package:to_buy/services/geminService.dart';
 import 'package:to_buy/widgets/listify_widget.dart';
-import 'package:to_buy/widgets/shared_preferences_storage.dart';
 import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  Geminservice.init();
   ListifyWidgetManager.setGroupId();
-  ListifyWidgetManager.updateHeadline(BuyList(name: "buylist", description: "description"));
+  ListifyWidgetManager.updateHeadline(
+    BuyList(name: "buylist", description: "description"),
+  );
   runApp(
     riverpod.ProviderScope(
       child: provider.ChangeNotifierProvider<Themeprovider>(
@@ -52,8 +53,7 @@ class AuthGate extends StatefulWidget {
 }
 
 class AuthGateStata extends State<AuthGate> {
-  static final platform= MethodChannel("ListifyWidgetRoutes");
-
+  static final platform = MethodChannel("ListifyWidgetRoutes");
 
   @override
   void initState() {
@@ -67,8 +67,10 @@ class AuthGateStata extends State<AuthGate> {
       if (result != null) {
         final targetPage = result['target_page'] as String?;
         if (targetPage != null) {
-            Navigator.push(context, MaterialPageRoute(builder: (context) => ListScreen()));
-
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => ListScreen()),
+          );
         }
       }
     } catch (e) {
@@ -91,6 +93,3 @@ class AuthGateStata extends State<AuthGate> {
     );
   }
 }
-
-
-

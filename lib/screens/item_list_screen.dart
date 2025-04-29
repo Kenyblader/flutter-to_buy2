@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_gemini/flutter_gemini.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:to_buy/models/buy_list.dart';
 import 'package:provider/provider.dart';
@@ -13,9 +14,10 @@ import 'package:to_buy/screens/restore_list_screen.dart';
 import 'package:to_buy/services/firestore_service.dart';
 import 'package:provider/provider.dart' as provider;
 import 'package:to_buy/provider/theme_provider.dart';
+import 'package:to_buy/services/geminService.dart';
 
 class ItemListScreen extends ConsumerWidget {
-  const ItemListScreen({super.key, required this.list});
+  ItemListScreen({super.key, required this.list});
   final BuyList? list;
 
   @override

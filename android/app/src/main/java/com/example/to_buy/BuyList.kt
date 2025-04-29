@@ -15,16 +15,8 @@ data class BuyItem(
 }
 
 data class BuyList(
-    val id: String,
     val name: String,
-    val description: String,
-    val date: Date = Date(),
-    val expirationDate: Date? = null,
-    val items: List<BuyItem> = listOf()
+    val description: String
 ) {
-    val total: Double
-        get() = items.sumOf { it.getTotal() }
-
-    val isComplete: Boolean
-        get() = items.all { it.isBuy }
+   
 }
