@@ -236,33 +236,16 @@ class ListDetailScreen extends StatelessWidget {
 
   // Fonction pour générer et partager un PDF
   Future<void> _shareList(BuildContext context, List<BuyItem> items) async {
-    final listSnapshot =
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(FirestoreService().userId)
-            .collection('lists')
-            .doc(listId)
-            .get();
-
-    if (!listSnapshot.exists) {
-      print('Erreur: Liste $listId introuvable');
+    final listData = await FirestoreService().getBuyListById(listId);
+    if (listData == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Erreur : Liste introuvable')),
+        const SnackBar(content: Text('Erreur: Liste introuvable')),
       );
       return;
     }
-
-    final listData = listSnapshot.data()!;
-    final list = BuyList(
-      id: listSnapshot.id,
-      name: listData['name'] as String,
-      description: listData['description'] as String,
-      expirationDate:
-          listData['expirationDate'] != null
-              ? (listData['expirationDate'] as Timestamp).toDate()
-              : null,
-      items: items,
-    );
+    listData.items = items;
+    final list = listData;
+    print('Génération du PDF pour la liste: ${list.name}');
 
     final pdf = pw.Document();
     final total = items.fold(0.0, (sum, item) => sum + item.getTotal());

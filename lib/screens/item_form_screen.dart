@@ -1,8 +1,11 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:to_buy/components/style_button.dart';
 import 'package:to_buy/models/buy_item.dart';
 import 'package:to_buy/models/buy_list.dart';
 import 'package:to_buy/services/firestore_service.dart';
+import 'package:to_buy/services/geminService.dart';
 import 'package:to_buy/validators/add_form_validators.dart';
 import 'package:provider/provider.dart';
 import 'package:to_buy/provider/theme_provider.dart';
@@ -20,6 +23,7 @@ class _ItemFormState extends State<ItemFormScreen> {
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
   final List<Map<String, TextEditingController>> _items = [];
+  final List<ItemPropose> iaItem = [];
   double _total = 0.0;
 
   @override
@@ -47,6 +51,12 @@ class _ItemFormState extends State<ItemFormScreen> {
     }
     setState(() {
       _total = total;
+    });
+  }
+
+  void _removeItem(int index) {
+    setState(() {
+      _items.removeAt(index);
     });
   }
 
@@ -83,9 +93,53 @@ class _ItemFormState extends State<ItemFormScreen> {
     }
   }
 
+  void proposeValue(String jsonString) {
+    var cleanedJson = jsonString.trim();
+    if (cleanedJson.startsWith('```json')) {
+      cleanedJson = cleanedJson.substring(7, cleanedJson.length - 3).trim();
+    } else if (cleanedJson.startsWith('```')) {
+      cleanedJson = cleanedJson.substring(3, cleanedJson.length - 3).trim();
+    }
+
+    print('Réponse JSON brute : $cleanedJson');
+
+    final jsonData = jsonDecode(cleanedJson) as Map<String, dynamic>;
+    List<ItemPropose> items =
+        jsonData["items"].map((data) => ItemPropose.fromJson(data)).toList();
+    setState(() {
+      _items.addAll(
+        items.map((item) {
+          return {
+            'name': TextEditingController(text: item.name),
+            'price': TextEditingController(text: item.price.toString()),
+            'quantity': TextEditingController(text: item.quantity.toString()),
+          };
+        }).toList(),
+      );
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<Themeprovider>(context, listen: false);
+
+    try {
+      Geminservice().getItemsWithOrder(
+        _items
+            .map(
+              (e) => BuyItem(
+                name: e['name']?.text as String,
+                price: double.parse(e['price']?.text as String),
+                quantity: double.parse(e['quantity']?.text as String),
+              ),
+            )
+            .toList(),
+        proposeValue,
+      );
+    } catch (e) {
+      print("erreur Gemini: $e");
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Créer une liste de courses'),
@@ -191,6 +245,13 @@ class _ItemFormState extends State<ItemFormScreen> {
                               onChanged: (_) => _calculateTotal(),
                             ),
                           ),
+                          IconButton(
+                            onPressed: () => _removeItem(index),
+                            icon: const Icon(
+                              Icons.remove_circle,
+                              color: Colors.blue,
+                            ),
+                          ),
                         ],
                       ),
                       const SizedBox(height: 8),
@@ -237,5 +298,39 @@ class _ItemFormState extends State<ItemFormScreen> {
       item['quantity']!.dispose();
     }
     super.dispose();
+  }
+}
+
+class ItemPropose {
+  String name;
+  double price;
+
+  double quantity;
+  ItemPropose({
+    required this.name,
+    required this.price,
+    required this.quantity,
+  });
+
+  factory ItemPropose.fromJson(Map<String, dynamic> data) {
+    return ItemPropose(
+      name: data['name'],
+      price: data['price'] as double,
+      quantity: data['quantity'] as double,
+    );
+  }
+
+  factory ItemPropose.parse(String jsonString) {
+    var cleanedJson = jsonString.trim();
+    if (cleanedJson.startsWith('```json')) {
+      cleanedJson = cleanedJson.substring(7, cleanedJson.length - 3).trim();
+    } else if (cleanedJson.startsWith('```')) {
+      cleanedJson = cleanedJson.substring(3, cleanedJson.length - 3).trim();
+    }
+
+    print('Réponse JSON brute : $cleanedJson');
+
+    final jsonData = jsonDecode(cleanedJson) as Map<String, dynamic>;
+    return jsonData["items"].map((data) => ItemPropose.fromJson(data)).toList();
   }
 }

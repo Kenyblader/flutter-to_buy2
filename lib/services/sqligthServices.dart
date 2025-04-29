@@ -259,6 +259,20 @@ class DatabaseHelper {
     return itemMaps.isNotEmpty ? BuyItem.fromMap(itemMaps.first) : null;
   }
 
+  getBuyListById(String listId) async {
+    final db = await database;
+    final listMaps = await db.query(
+      'buy_lists',
+      where: 'id = ?',
+      whereArgs: [listId],
+    );
+    if (listMaps.isNotEmpty) {
+      final items = await getBuyItemsByBuyListId(listId);
+      return BuyList.fromMap(listMaps.first, items);
+    }
+    return null;
+  }
+
   // // --- Méthode pour synchronisation avec backend (optionnel) ---
   // Future<void> syncBuyListWithBackend(BuyList buyList, String backendUrl) async {
   //   // Exemple d'envoi au backend via HTTP

@@ -1,9 +1,12 @@
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_gemini/flutter_gemini.dart';
 import 'package:to_buy/models/buy_item.dart';
+import 'package:to_buy/models/buy_list.dart';
+import 'package:to_buy/services/firestore_service.dart';
 import 'package:to_buy/services/geminService.dart';
 
 class ProposeMenu extends StatefulWidget {
@@ -13,64 +16,60 @@ class ProposeMenu extends StatefulWidget {
 
 class _ProposeMenuState extends State<ProposeMenu> {
   final TextEditingController _budgetController = TextEditingController();
-  final gemin = Geminservice().gemini;
+  final gemin = Geminservice();
 
   final List<ElementAffich> _items = [];
   final List<BuyItem> _saveditems = [];
+  String menuName = "";
 
-  Map<String, dynamic> parseCustomJsonString(String input) {
+  DishModel? parseCustomJsonString(String jsonString) {
     // Corriger les clés non-encadrées avec des guillemets
-    final keyRegex = RegExp(r'(\w+):');
-    final fixedJson = input.replaceAllMapped(
-      keyRegex,
-      (match) => '"${match[1]}":',
-    );
+    try {
+      var cleanedJson = jsonString.trim();
+      if (cleanedJson.startsWith('```json')) {
+        cleanedJson = cleanedJson.substring(7, cleanedJson.length - 3).trim();
+      } else if (cleanedJson.startsWith('```')) {
+        cleanedJson = cleanedJson.substring(3, cleanedJson.length - 3).trim();
+      }
 
-    // Parser en JSON
-    return jsonDecode(fixedJson);
+      print('Réponse JSON brute : $cleanedJson');
+
+      // Parser le JSON
+      final jsonData = jsonDecode(cleanedJson) as Map<String, dynamic>;
+      final dish = DishModel.fromJson(jsonData);
+
+      // Mettre à jour le widget Android avec les ingrédients
+      return dish;
+    } catch (error, stackTrace) {
+      print('Erreur Gemini : $error');
+      print('Trace de la pile : $stackTrace');
+      return null;
+    }
   }
 
-  void _validateBudget() {
+  Future<void> _validateBudget() async {
     final budget = _budgetController.text;
     if (budget.isNotEmpty) {
-      gemin
-          .prompt(
-            parts: [
-              Part.text(
-                "je suis un camerounais qui vis actuelement au cameroun et j'aimerais que aprtir des informations que tu as su la cuisine camerounaise te me propose un menu que je peux faire avec la somme de $budget",
-              ),
-              Part.text(
-                "ta reponse ne dois comporter aucun formuel car je la parserais en brute pour quelle respecte cette strecuture menu:{name:\"ici tu metra le nom du menu que tu me propose tel qu'il est appeler au cameroun \",ingredients:[{name:\"ici le nom de l'ingredient\",description:\"l'utilite de l'ingredient\",price:le prix unitaire en double,quantity:int}]}",
-              ),
-              Part.text(
-                "surtout noublis pas de bien formater le resultat car le mesage que vas me renvoyer sera parser en json tel quel",
-              ),
-            ],
-          )
+      await gemin.GetMEnuByBudget(budget)
           .then((result) {
-            final parsedResult = parseCustomJsonString(
-              result?.output as String,
-            );
-            final menu = parsedResult['menu'];
-            final ingredients = menu['ingredients'] as List<dynamic>;
+            print('IA Response: ${result}');
+            final parsedResult = parseCustomJsonString(result);
+            final menu = parsedResult?.name;
+            if (menu != null) {
+              final ingredients = parsedResult?.ingredients ?? [];
 
-            List<ElementAffich> items =
-                ingredients.map((ingredient) {
-                  return ElementAffich(
-                    name: ingredient['name'],
-                    price: ingredient['price'].toDouble(),
-                    quantity: ingredient['quatity'],
-                    desctiption: ingredient['description'],
-                  );
-                }).toList();
-
-            setState(() {
-              _items.clear();
-              _items.addAll(items);
-            });
+              setState(() {
+                menuName = menu;
+                _items.clear();
+                _items.addAll(ingredients);
+              });
+            }
           })
-          .catchError((e) {
-            print('Erreur: $e');
+          .onError((error, stackTrace) {
+            print('Erreur : $error');
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text('Erreur : $error')));
           });
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -79,16 +78,14 @@ class _ProposeMenuState extends State<ProposeMenu> {
     }
   }
 
-  void _onDismissed(ElementAffich item, DismissDirection direction) {
-    if (direction == DismissDirection.startToEnd) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Action gauche-droite sur ${item.name}')),
-      );
-    } else if (direction == DismissDirection.endToStart) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Action droite-gauche sur ${item.name}')),
-      );
-    }
+  void _onDismissed(int index, DismissDirection direction) {
+    setState(() {
+      if (direction == DismissDirection.startToEnd) {
+        _items[index].isSelected = true;
+      } else if (direction == DismissDirection.endToStart) {
+        _items[index].isSelected = false;
+      }
+    });
   }
 
   @override
@@ -103,9 +100,15 @@ class _ProposeMenuState extends State<ProposeMenu> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Entrez votre budget :',
-              style: Theme.of(context).textTheme.labelMedium,
+            Center(
+              child: Text(
+                'Entrez votre budget :',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).primaryColor,
+                ),
+              ),
             ),
             SizedBox(height: 8),
             TextField(
@@ -126,6 +129,13 @@ class _ProposeMenuState extends State<ProposeMenu> {
               ),
             ),
             SizedBox(height: 16),
+            Center(
+              child: Text(
+                menuName,
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+            ),
+            SizedBox(height: 8),
             Expanded(
               child: ListView.builder(
                 itemCount: _items.length,
@@ -133,7 +143,7 @@ class _ProposeMenuState extends State<ProposeMenu> {
                   final item = _items[index];
                   return Dismissible(
                     key: Key(item.name),
-                    onDismissed: (direction) => _onDismissed(item, direction),
+                    // onDismissed: (direction) => _onDismissed(item, direction),
                     background: Container(
                       color: Colors.green,
                       alignment: Alignment.centerLeft,
@@ -146,13 +156,40 @@ class _ProposeMenuState extends State<ProposeMenu> {
                       padding: EdgeInsets.symmetric(horizontal: 20),
                       child: Icon(Icons.delete, color: Colors.white),
                     ),
+                    confirmDismiss: (direction) async {
+                      _onDismissed(index, direction);
+                      return false;
+                    },
                     child: Card(
                       elevation: 4,
+                      color: item.isSelected ? Colors.green[50] : Colors.white,
                       margin: EdgeInsets.symmetric(vertical: 8),
                       child: ListTile(
-                        title: Text(item.name),
-                        subtitle: Text('Prix: \$${item.price}'),
+                        title: Text(
+                          item.name,
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(item.desctiption),
+                            Text(
+                              '${formatDouble(item.price)} XAF x ${formatDouble(item.quantity)}',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.green,
+                              ),
+                            ),
+                          ],
+                        ),
                         leading: Icon(Icons.shopping_cart),
+                        trailing: Text(
+                          '${formatDouble(item.quantity * item.price)} XAF',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue,
+                          ),
+                        ),
                       ),
                     ),
                   );
@@ -162,6 +199,55 @@ class _ProposeMenuState extends State<ProposeMenu> {
           ],
         ),
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          final service = FirestoreService();
+          for (var item in _items) {
+            if (item.isSelected) {
+              _saveditems.add(
+                BuyItem(
+                  name: item.name,
+                  price: item.price,
+                  quantity: item.quantity,
+                ),
+              );
+            }
+          }
+          if (_saveditems.isEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Aucun article sélectionné')),
+            );
+            return;
+          }
+          if (menuName.isEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Veuillez valider le budget d\'abord')),
+            );
+            return;
+          }
+          var list = BuyList(
+            name: "generated list ${DateTime.now().millisecond}",
+            description: "preparation de $menuName",
+            items: _saveditems,
+          );
+          service
+              .addBuyList(list, _saveditems)
+              .then((value) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Liste créée avec succès')),
+                );
+                Navigator.pop(context);
+              })
+              .catchError((error) {
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text('Erreur : $error')));
+              });
+        },
+        backgroundColor: Theme.of(context).primaryColor,
+        child: Text('save', style: TextStyle(color: Colors.white)),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }
 }
@@ -171,6 +257,7 @@ class ElementAffich {
   String desctiption;
   double price;
   double quantity;
+  bool isSelected = true;
 
   ElementAffich({
     required this.desctiption,
@@ -178,4 +265,46 @@ class ElementAffich {
     required this.price,
     required this.quantity,
   });
+
+  factory ElementAffich.fromJson(Map<String, dynamic> json) {
+    return ElementAffich(
+      name: json['name'],
+      desctiption: json['description'],
+      price: json['price'].toDouble(),
+      quantity: json['quantity'].toDouble(),
+    );
+  }
+  Map<String, dynamic> toJson() {
+    return {
+      'name': name,
+      'description': desctiption,
+      'price': price,
+      'quantity': quantity,
+    };
+  }
+}
+
+class DishModel {
+  final String name;
+  final List<ElementAffich> ingredients;
+
+  DishModel({required this.name, required this.ingredients});
+
+  factory DishModel.fromJson(Map<String, dynamic> json) {
+    return DishModel(
+      name: json['name'],
+      ingredients:
+          (json['ingredients'] as List<dynamic>)
+              .map((ingredient) => ElementAffich.fromJson(ingredient))
+              .toList(),
+    );
+  }
+}
+
+String formatDouble(double value) {
+  if (value == value.toInt()) {
+    return value.toInt().toString(); // Pas de décimales
+  } else {
+    return value.toStringAsFixed(2); // Afficher 2 décimales
+  }
 }

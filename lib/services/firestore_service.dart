@@ -29,6 +29,16 @@ class FirestoreService {
     await sqlService.insertBuyList(buyList, userId as String);
   }
 
+  Future<BuyList?> getBuyListById(String listId) async {
+    if (userId == null) {
+      print('Erreur: Utilisateur non connecté, retour d\'une liste vide');
+      return null;
+    }
+
+    var buyList = await sqlService.getBuyListById(listId);
+    return buyList;
+  }
+
   // Récupérer toutes les listes de courses
   Stream<List<BuyList>> getBuyLists() {
     if (userId == null) {
