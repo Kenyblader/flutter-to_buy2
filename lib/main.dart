@@ -18,9 +18,7 @@ void main() async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   Geminservice.init();
   ListifyWidgetManager.setGroupId();
-  ListifyWidgetManager.updateHeadline(
-    BuyList(name: "buylist", description: "description"),
-  );
+  ListifyWidgetManager.updateHeadline();
   runApp(
     riverpod.ProviderScope(
       child: provider.ChangeNotifierProvider<Themeprovider>(

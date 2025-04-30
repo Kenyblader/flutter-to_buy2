@@ -33,6 +33,20 @@ class _ItemFormState extends State<ItemFormScreen> {
   }
 
   void _addItemRow() {
+    try {
+      Geminservice().getItemsWithOrder(
+        _items.map((e) {
+          return BuyItem(
+            name: e['name']?.text as String,
+            price: double.parse(e['price']?.text as String),
+            quantity: double.parse(e['quantity']?.text as String),
+          );
+        }).toList(),
+        proposeValue,
+      );
+    } catch (e) {
+      print("erreur Gemini: $e");
+    }
     setState(() {
       _items.add({
         'name': TextEditingController(),
@@ -125,15 +139,13 @@ class _ItemFormState extends State<ItemFormScreen> {
 
     try {
       Geminservice().getItemsWithOrder(
-        _items
-            .map(
-              (e) => BuyItem(
-                name: e['name']?.text as String,
-                price: double.parse(e['price']?.text as String),
-                quantity: double.parse(e['quantity']?.text as String),
-              ),
-            )
-            .toList(),
+        _items.map((e) {
+          return BuyItem(
+            name: e['name']?.text as String,
+            price: double.parse(e['price']?.text as String),
+            quantity: double.parse(e['quantity']?.text as String),
+          );
+        }).toList(),
         proposeValue,
       );
     } catch (e) {

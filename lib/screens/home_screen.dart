@@ -24,7 +24,9 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  static const _floatingWidgetChannel = MethodChannel('com.example.to_buy/floating_widget');
+  static const _floatingWidgetChannel = MethodChannel(
+    'com.example.to_buy/floating_widget',
+  );
   static const _pipChannel = MethodChannel('com.example.tobuy/pip');
   bool _isFloatingWidgetActive = false;
 
@@ -46,23 +48,24 @@ class _HomeScreenState extends State<HomeScreen> {
       } else {
         final shouldProceed = await showDialog<bool>(
           context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Permission requise'),
-            content: const Text(
-              'Pour afficher un bouton flottant par-dessus d\'autres applications, '
-              'vous devez accorder la permission d\'affichage. Voulez-vous continuer ?',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Annuler'),
+          builder:
+              (context) => AlertDialog(
+                title: const Text('Permission requise'),
+                content: const Text(
+                  'Pour afficher un bouton flottant par-dessus d\'autres applications, '
+                  'vous devez accorder la permission d\'affichage. Voulez-vous continuer ?',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: const Text('Annuler'),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    child: const Text('Continuer'),
+                  ),
+                ],
               ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('Continuer'),
-              ),
-            ],
-          ),
         );
         if (shouldProceed != true) return;
 
@@ -96,7 +99,9 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _enterPipMode() async {
     if (!Platform.isAndroid) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Mode Picture-in-Picture non supporté sur iOS')),
+        const SnackBar(
+          content: Text('Mode Picture-in-Picture non supporté sur iOS'),
+        ),
       );
       return;
     }
@@ -106,9 +111,9 @@ class _HomeScreenState extends State<HomeScreen> {
       print('Mode PiP déclenché');
     } catch (e) {
       print('Erreur PiP: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur PiP: ${e.toString()}')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Erreur PiP: ${e.toString()}')));
     }
   }
 
@@ -129,7 +134,9 @@ class _HomeScreenState extends State<HomeScreen> {
             onPressed: _enterPipMode,
           ),
           IconButton(
-            icon: Icon(_isFloatingWidgetActive ? Icons.close : Icons.bubble_chart),
+            icon: Icon(
+              _isFloatingWidgetActive ? Icons.close : Icons.bubble_chart,
+            ),
             color: _isFloatingWidgetActive ? Colors.red : Colors.white,
             onPressed: _toggleFloatingWidget,
           ),
@@ -167,7 +174,7 @@ class _HomeScreenState extends State<HomeScreen> {
               leading: const Icon(Icons.settings),
               title: const Text('Paramètres'),
               onTap: () {
-                ListifyWidgetManager.updateHeadline(BuyList(name: "parmBuyList", description: "description param"));
+                ListifyWidgetManager.updateHeadline();
                 print("HomeScreen Modifier");
               },
             ),
@@ -180,7 +187,10 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
             ListTile(
-              leading: themeProvider.isDark ? const Icon(Icons.light_mode) : const Icon(Icons.dark_mode),
+              leading:
+                  themeProvider.isDark
+                      ? const Icon(Icons.light_mode)
+                      : const Icon(Icons.dark_mode),
               title: Text(themeProvider.isDark ? 'Mode Sombre' : 'Mode Clair'),
               onTap: () {
                 themeProvider.toggleTheme();

@@ -7,6 +7,7 @@ import 'package:to_buy/models/buy_item.dart';
 import 'package:to_buy/models/buy_list.dart';
 import 'package:to_buy/provider/auth_provider.dart';
 import 'package:to_buy/services/sqligthServices.dart';
+import 'package:to_buy/widgets/listify_widget.dart';
 
 class FirestoreService {
   final sqlService = DatabaseHelper.instance;
@@ -27,6 +28,8 @@ class FirestoreService {
     buyList.items = items;
 
     await sqlService.insertBuyList(buyList, userId as String);
+
+    ListifyWidgetManager.updateHeadline();
   }
 
   Future<BuyList?> getBuyListById(String listId) async {

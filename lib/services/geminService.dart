@@ -28,15 +28,15 @@ class Geminservice {
         .prompt(
           parts: [
             Part.text('''
-      Générez un JSON valide représentant un plat CAMEROUNAIS  avec une liste d'ingrédients pour la préparation d'un plat caerounais exple(Ndole,poulet Dg,riz avec sauce d'arrachide,poisson braise,poulet braise,Taro,eru ......et plein d'autre a toi de choisir en fonction de la saison)  AVEC UN BUDGET DE $budget FCFA. L'objet doit avoir :
+      Générez un JSON valide représentant  une liste d'ingrédients pour la préparation d'un plat camerounais exemple(Ndole,poulet Dg,riz avec sauce d'arrachide,poisson braise,poulet braise,Taro,eru ......et plein d'autre a toi de choisir en fonction de la saison)  AVEC UN BUDGET DE $budget FCFA. L'objet doit avoir :
       - name : le nom du plat (chaîne).
-      - ingredients : une liste d' ingrédients complee neccessaire a la realisation du plat, chaque ingrédient ayant :
+      - ingredients : une liste d' ingrédients  neccessaire a la realisation du plat, chaque ingrédient ayant :
         - name : nom de l'ingrédient (chaîne).
         - description : description de l'utilisation (chaîne).
         - price : prix en XAF (nombre décimal).
         - quantity : quantité nécessaire (entier).
 
-      NB: la somme des prix des ingrédients * la quantite doit être inférieure a $budget.
+      NB: la somme des prix des ingrédients * la quantite doit être inférieure a  $budget Fcfa.
 
       Exemple de réponse :
       {
@@ -48,14 +48,19 @@ class Geminservice {
             "description": "Pour la marinade et la sauce",
             "price": 500.00,
             "quantity": 2
-          }
+          },
           {
             "name": "huile(litre)",
             "description": "Pour la friture",
             "price": 1500.00,
             "quantity": 1
           },
-         
+          {
+            "name": "viande(kg)",
+            "description": "comme complement",
+            "price": 500,
+            "quantity": 1,5
+          }
         ]
       }
 
