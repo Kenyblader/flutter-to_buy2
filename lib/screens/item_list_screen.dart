@@ -17,7 +17,7 @@ import 'package:to_buy/provider/theme_provider.dart';
 import 'package:to_buy/services/geminService.dart';
 
 class ItemListScreen extends ConsumerWidget {
-  ItemListScreen({super.key, required this.list});
+  const ItemListScreen({super.key, required this.list});
   final BuyList? list;
 
   @override

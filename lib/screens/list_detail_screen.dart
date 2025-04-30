@@ -5,11 +5,9 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:to_buy/models/buy_item.dart';
-import 'package:to_buy/models/buy_list.dart';
 import 'package:to_buy/services/firestore_service.dart';
 import 'package:provider/provider.dart' as provider;
 import 'package:to_buy/provider/theme_provider.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ListDetailScreen extends StatelessWidget {
   final String listId;
@@ -25,106 +23,141 @@ class ListDetailScreen extends StatelessWidget {
 
     await showDialog(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Ajouter un article'),
-            content: Form(
-              key: formKey,
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextFormField(
-                      controller: nameController,
-                      decoration: const InputDecoration(labelText: 'Nom'),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Veuillez entrer un nom';
-                        }
-                        return null;
-                      },
+      builder: (context) => AlertDialog(
+        title: const Text(
+          'Ajouter un article',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.blueAccent,
+          ),
+        ),
+        content: Form(
+          key: formKey,
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextFormField(
+                    controller: nameController,
+                    decoration: InputDecoration(
+                      labelText: 'Nom',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
-                    TextFormField(
-                      controller: priceController,
-                      decoration: const InputDecoration(labelText: 'Prix (€)'),
-                      keyboardType: TextInputType.number,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Veuillez entrer un prix';
-                        }
-                        if (double.tryParse(value) == null ||
-                            double.parse(value) <= 0) {
-                          return 'Veuillez entrer un prix valide';
-                        }
-                        return null;
-                      },
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Veuillez entrer un nom';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: priceController,
+                    decoration: InputDecoration(
+                      labelText: 'Prix (Fcfa)',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
-                    TextFormField(
-                      controller: quantityController,
-                      decoration: const InputDecoration(labelText: 'Quantité'),
-                      keyboardType: TextInputType.number,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Veuillez entrer une quantité';
-                        }
-                        if (double.tryParse(value) == null ||
-                            double.parse(value) <= 0) {
-                          return 'Veuillez entrer une quantité valide';
-                        }
-                        return null;
-                      },
+                    keyboardType: TextInputType.number,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Veuillez entrer un prix';
+                      }
+                      if (double.tryParse(value) == null || double.parse(value) <= 0) {
+                        return 'Veuillez entrer un prix valide';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: quantityController,
+                    decoration: InputDecoration(
+                      labelText: 'Quantité',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
-                  ],
-                ),
+                    keyboardType: TextInputType.number,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Veuillez entrer une quantité';
+                      }
+                      if (double.tryParse(value) == null || double.parse(value) <= 0) {
+                        return 'Veuillez entrer une quantité valide';
+                      }
+                      return null;
+                    },
+                  ),
+                ],
               ),
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Annuler'),
-              ),
-              ElevatedButton(
-                onPressed: () async {
-                  if (formKey.currentState!.validate()) {
-                    try {
-                      final newItem = BuyItem(
-                        id: null,
-                        name: nameController.text,
-                        price: double.parse(priceController.text),
-                        quantity: double.parse(quantityController.text),
-                        date: DateTime.now(),
-                      );
-                      print(
-                        'Tentative d\'ajout de l\'article: ${newItem.name}, Liste ID: $listId',
-                      );
-                      await FirestoreService().addItemToList(listId, newItem);
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Article ajouté avec succès'),
-                        ),
-                      );
-                    } catch (e) {
-                      print('Erreur lors de l\'ajout de l\'article: $e');
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Erreur lors de l\'ajout: $e')),
-                      );
-                    }
-                  }
-                },
-                child: const Text('Ajouter'),
-              ),
-            ],
           ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text(
+              'Annuler',
+              style: TextStyle(color: Colors.blueAccent),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (formKey.currentState!.validate()) {
+                try {
+                  final newItem = BuyItem(
+                    id: null,
+                    name: nameController.text,
+                    price: double.parse(priceController.text),
+                    quantity: double.parse(quantityController.text),
+                    date: DateTime.now(),
+                  );
+                  print(
+                    'Tentative d\'ajout de l\'article: ${newItem.name}, Liste ID: $listId',
+                  );
+                  await FirestoreService().addItemToList(listId, newItem);
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Article ajouté avec succès'),
+                    ),
+                  );
+                } catch (e) {
+                  print('Erreur lors de l\'ajout de l\'article: $e');
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Erreur lors de l\'ajout: $e')),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blueAccent,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: const Text('Ajouter'),
+          ),
+        ],
+      ),
     );
   }
 
   // Fonction pour afficher le formulaire de modification
   Future<void> _showEditItemDialog(
-    BuildContext context,
-    BuyItem item,
-    String itemId,
-  ) async {
+      BuildContext context,
+      BuyItem item,
+      String itemId,
+      ) async {
     final nameController = TextEditingController(text: item.name);
     final priceController = TextEditingController(text: item.price.toString());
     final quantityController = TextEditingController(
@@ -134,103 +167,138 @@ class ListDetailScreen extends StatelessWidget {
 
     await showDialog(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Modifier l\'article'),
-            content: Form(
-              key: formKey,
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextFormField(
-                      controller: nameController,
-                      decoration: const InputDecoration(labelText: 'Nom'),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Veuillez entrer un nom';
-                        }
-                        return null;
-                      },
+      builder: (context) => AlertDialog(
+        title: const Text(
+          'Modifier l\'article',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.blueAccent,
+          ),
+        ),
+        content: Form(
+          key: formKey,
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextFormField(
+                    controller: nameController,
+                    decoration: InputDecoration(
+                      labelText: 'Nom',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
-                    TextFormField(
-                      controller: priceController,
-                      decoration: const InputDecoration(labelText: 'Prix (€)'),
-                      keyboardType: TextInputType.number,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Veuillez entrer un prix';
-                        }
-                        if (double.tryParse(value) == null ||
-                            double.parse(value) <= 0) {
-                          return 'Veuillez entrer un prix valide';
-                        }
-                        return null;
-                      },
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Veuillez entrer un nom';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: priceController,
+                    decoration: InputDecoration(
+                      labelText: 'Prix (Fcfa)',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
-                    TextFormField(
-                      controller: quantityController,
-                      decoration: const InputDecoration(labelText: 'Quantité'),
-                      keyboardType: TextInputType.number,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Veuillez entrer une quantité';
-                        }
-                        if (double.tryParse(value) == null ||
-                            double.parse(value) <= 0) {
-                          return 'Veuillez entrer une quantité valide';
-                        }
-                        return null;
-                      },
+                    keyboardType: TextInputType.number,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Veuillez entrer un prix';
+                      }
+                      if (double.tryParse(value) == null || double.parse(value) <= 0) {
+                        return 'Veuillez entrer un prix valide';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: quantityController,
+                    decoration: InputDecoration(
+                      labelText: 'Quantité',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
-                  ],
-                ),
+                    keyboardType: TextInputType.number,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Veuillez entrer une quantité';
+                      }
+                      if (double.tryParse(value) == null || double.parse(value) <= 0) {
+                        return 'Veuillez entrer une quantité valide';
+                      }
+                      return null;
+                    },
+                  ),
+                ],
               ),
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Annuler'),
-              ),
-              ElevatedButton(
-                onPressed: () async {
-                  if (formKey.currentState!.validate()) {
-                    try {
-                      final updatedItem = BuyItem(
-                        id: item.id,
-                        name: nameController.text,
-                        price: double.parse(priceController.text),
-                        quantity: double.parse(quantityController.text),
-                        date: item.date,
-                      );
-                      print(
-                        'Tentative de modification de l\'article: $itemId, Liste ID: $listId',
-                      );
-                      await FirestoreService().updateItem(
-                        listId,
-                        itemId,
-                        updatedItem,
-                      );
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Article modifié avec succès'),
-                        ),
-                      );
-                    } catch (e) {
-                      print('Erreur lors de la modification: $e');
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Erreur lors de la modification: $e'),
-                        ),
-                      );
-                    }
-                  }
-                },
-                child: const Text('Enregistrer'),
-              ),
-            ],
           ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text(
+              'Annuler',
+              style: TextStyle(color: Colors.blueAccent),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (formKey.currentState!.validate()) {
+                try {
+                  final updatedItem = BuyItem(
+                    id: item.id,
+                    name: nameController.text,
+                    price: double.parse(priceController.text),
+                    quantity: double.parse(quantityController.text),
+                    date: item.date,
+                  );
+                  print(
+                    'Tentative de modification de l\'article: $itemId, Liste ID: $listId',
+                  );
+                  await FirestoreService().updateItem(
+                    listId,
+                    itemId,
+                    updatedItem,
+                  );
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Article modifié avec succès'),
+                    ),
+                  );
+                } catch (e) {
+                  print('Erreur lors de la modification: $e');
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Erreur lors de la modification: $e'),
+                    ),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blueAccent,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: const Text('Enregistrer'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -254,116 +322,116 @@ class ListDetailScreen extends StatelessWidget {
       pw.Page(
         build:
             (pw.Context context) => pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Text(
+              'Liste de courses : ${list.name}',
+              style: pw.TextStyle(
+                fontSize: 24,
+                fontWeight: pw.FontWeight.bold,
+              ),
+            ),
+            pw.SizedBox(height: 10),
+            pw.Text(
+              'Description : ${list.description}',
+              style: pw.TextStyle(fontSize: 16),
+            ),
+            if (list.expirationDate != null)
+              pw.Text(
+                'Date d\'expiration : ${list.expirationDate!.toLocal().toString().split(' ')[0]}',
+                style: pw.TextStyle(fontSize: 16),
+              ),
+            pw.SizedBox(height: 20),
+            pw.Text(
+              'Articles :',
+              style: pw.TextStyle(
+                fontSize: 18,
+                fontWeight: pw.FontWeight.bold,
+              ),
+            ),
+            pw.SizedBox(height: 10),
+            pw.Table(
+              border: pw.TableBorder.all(),
+              columnWidths: {
+                0: pw.FlexColumnWidth(3),
+                1: pw.FlexColumnWidth(2),
+                2: pw.FlexColumnWidth(2),
+                3: pw.FlexColumnWidth(2),
+              },
               children: [
-                pw.Text(
-                  'Liste de courses : ${list.name}',
-                  style: pw.TextStyle(
-                    fontSize: 24,
-                    fontWeight: pw.FontWeight.bold,
+                pw.TableRow(
+                  decoration: pw.BoxDecoration(
+                    color: PdfColor(0.78, 0.78, 0.78),
                   ),
-                ),
-                pw.SizedBox(height: 10),
-                pw.Text(
-                  'Description : ${list.description}',
-                  style: pw.TextStyle(fontSize: 16),
-                ),
-                if (list.expirationDate != null)
-                  pw.Text(
-                    'Date d\'expiration : ${list.expirationDate!.toLocal().toString().split(' ')[0]}',
-                    style: pw.TextStyle(fontSize: 16),
-                  ),
-                pw.SizedBox(height: 20),
-                pw.Text(
-                  'Articles :',
-                  style: pw.TextStyle(
-                    fontSize: 18,
-                    fontWeight: pw.FontWeight.bold,
-                  ),
-                ),
-                pw.SizedBox(height: 10),
-                pw.Table(
-                  border: pw.TableBorder.all(),
-                  columnWidths: {
-                    0: pw.FlexColumnWidth(3),
-                    1: pw.FlexColumnWidth(2),
-                    2: pw.FlexColumnWidth(2),
-                    3: pw.FlexColumnWidth(2),
-                  },
                   children: [
-                    pw.TableRow(
-                      decoration: pw.BoxDecoration(
-                        color: PdfColor(0.78, 0.78, 0.78),
+                    pw.Padding(
+                      padding: pw.EdgeInsets.all(8),
+                      child: pw.Text(
+                        'Nom',
+                        style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
                       ),
-                      children: [
-                        pw.Padding(
-                          padding: pw.EdgeInsets.all(8),
-                          child: pw.Text(
-                            'Nom',
-                            style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-                          ),
-                        ),
-                        pw.Padding(
-                          padding: pw.EdgeInsets.all(8),
-                          child: pw.Text(
-                            'Prix unitaire',
-                            style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-                          ),
-                        ),
-                        pw.Padding(
-                          padding: pw.EdgeInsets.all(8),
-                          child: pw.Text(
-                            'Quantité',
-                            style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-                          ),
-                        ),
-                        pw.Padding(
-                          padding: pw.EdgeInsets.all(8),
-                          child: pw.Text(
-                            'Total',
-                            style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-                          ),
-                        ),
-                      ],
                     ),
-                    ...items.map(
-                      (item) => pw.TableRow(
-                        children: [
-                          pw.Padding(
-                            padding: pw.EdgeInsets.all(8),
-                            child: pw.Text(item.name),
-                          ),
-                          pw.Padding(
-                            padding: pw.EdgeInsets.all(8),
-                            child: pw.Text(
-                              '${item.price.toStringAsFixed(2)} €',
-                            ),
-                          ),
-                          pw.Padding(
-                            padding: pw.EdgeInsets.all(8),
-                            child: pw.Text(item.quantity.toStringAsFixed(0)),
-                          ),
-                          pw.Padding(
-                            padding: pw.EdgeInsets.all(8),
-                            child: pw.Text(
-                              '${(item.price * item.quantity).toStringAsFixed(2)} €',
-                            ),
-                          ),
-                        ],
+                    pw.Padding(
+                      padding: pw.EdgeInsets.all(8),
+                      child: pw.Text(
+                        'Prix unitaire',
+                        style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                      ),
+                    ),
+                    pw.Padding(
+                      padding: pw.EdgeInsets.all(8),
+                      child: pw.Text(
+                        'Quantité',
+                        style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                      ),
+                    ),
+                    pw.Padding(
+                      padding: pw.EdgeInsets.all(8),
+                      child: pw.Text(
+                        'Total',
+                        style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
                       ),
                     ),
                   ],
                 ),
-                pw.SizedBox(height: 20),
-                pw.Text(
-                  'Total général : ${total.toStringAsFixed(2)} Fcfa',
-                  style: pw.TextStyle(
-                    fontSize: 18,
-                    fontWeight: pw.FontWeight.bold,
+                ...items.map(
+                      (item) => pw.TableRow(
+                    children: [
+                      pw.Padding(
+                        padding: pw.EdgeInsets.all(8),
+                        child: pw.Text(item.name),
+                      ),
+                      pw.Padding(
+                        padding: pw.EdgeInsets.all(8),
+                        child: pw.Text(
+                          '${item.price.toStringAsFixed(2)} €',
+                        ),
+                      ),
+                      pw.Padding(
+                        padding: pw.EdgeInsets.all(8),
+                        child: pw.Text(item.quantity.toStringAsFixed(0)),
+                      ),
+                      pw.Padding(
+                        padding: pw.EdgeInsets.all(8),
+                        child: pw.Text(
+                          '${(item.price * item.quantity).toStringAsFixed(2)} €',
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
+            pw.SizedBox(height: 20),
+            pw.Text(
+              'Total général : ${total.toStringAsFixed(2)} Fcfa',
+              style: pw.TextStyle(
+                fontSize: 18,
+                fontWeight: pw.FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
       ),
     );
 
@@ -403,7 +471,7 @@ class ListDetailScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Détails de la liste'),
         backgroundColor:
-            themeProvider.themeData.appBarTheme.backgroundColor ??
+        themeProvider.themeData.appBarTheme.backgroundColor ??
             Colors.blueAccent,
         centerTitle: true,
         leading: IconButton(
@@ -461,7 +529,7 @@ class ListDetailScreen extends StatelessWidget {
               }
               final total = items.fold(
                 0.0,
-                (sum, item) => sum + item.getTotal(),
+                    (sum, item) => sum + item.getTotal(),
               );
               return Column(
                 children: [
@@ -561,31 +629,31 @@ class ListDetailScreen extends StatelessWidget {
                                     context: context,
                                     builder:
                                         (context) => AlertDialog(
-                                          title: const Text(
-                                            'Confirmer la suppression',
+                                      title: const Text(
+                                        'Confirmer la suppression',
+                                      ),
+                                      content: Text(
+                                        'Voulez-vous supprimer l\'article "${item.name}" ?',
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          onPressed:
+                                              () => Navigator.pop(
+                                            context,
+                                            false,
                                           ),
-                                          content: Text(
-                                            'Voulez-vous supprimer l\'article "${item.name}" ?',
-                                          ),
-                                          actions: [
-                                            TextButton(
-                                              onPressed:
-                                                  () => Navigator.pop(
-                                                    context,
-                                                    false,
-                                                  ),
-                                              child: const Text('Annuler'),
-                                            ),
-                                            ElevatedButton(
-                                              onPressed:
-                                                  () => Navigator.pop(
-                                                    context,
-                                                    true,
-                                                  ),
-                                              child: const Text('Supprimer'),
-                                            ),
-                                          ],
+                                          child: const Text('Annuler'),
                                         ),
+                                        ElevatedButton(
+                                          onPressed:
+                                              () => Navigator.pop(
+                                            context,
+                                            true,
+                                          ),
+                                          child: const Text('Supprimer'),
+                                        ),
+                                      ],
+                                    ),
                                   );
                                   if (confirm == true) {
                                     try {
@@ -631,7 +699,7 @@ class ListDetailScreen extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.all(16.0),
                     child: Text(
-                      'Total de la liste: ${total.toStringAsFixed(2)} €',
+                      'Total de la liste: ${total.toStringAsFixed(2)} Fcfa',
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -665,7 +733,7 @@ class ListDetailScreen extends StatelessWidget {
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showAddItemDialog(context),
         backgroundColor:
-            themeProvider.themeData.floatingActionButtonTheme.backgroundColor,
+        themeProvider.themeData.floatingActionButtonTheme.backgroundColor,
         child: const Icon(Icons.add),
       ),
     );

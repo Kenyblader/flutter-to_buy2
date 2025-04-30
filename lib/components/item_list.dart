@@ -25,7 +25,7 @@ class ItemList extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 5),
-            Text('Date: ${item.date?.toLocal().toString().split(' ')[0]}'),
+            Text('Date: ${item.date.toLocal().toString().split(' ')[0]}'),
           ],
         ),
         trailing: IconButton(

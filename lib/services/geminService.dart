@@ -4,7 +4,7 @@ import 'package:flutter_gemini/flutter_gemini.dart';
 import 'package:to_buy/models/buy_item.dart';
 
 class Geminservice {
-  static String _geminiKey = "AIzaSyCjar5DiTdrsbD5fJiC6Ab138euQCc1mtM";
+  static final String _geminiKey = "AIzaSyCjar5DiTdrsbD5fJiC6Ab138euQCc1mtM";
   // ignore: prefer_typing_uninitialized_variables
   late Gemini gemini;
 
