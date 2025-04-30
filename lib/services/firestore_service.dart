@@ -58,7 +58,7 @@ class FirestoreService {
       return Stream.value([]);
     }
 
-    var data = await sqlService.getBuyItemsByBuyListId(listId).asStream();
+    var data = sqlService.getBuyItemsByBuyListId(listId).asStream();
     return data;
   }
 
@@ -72,7 +72,7 @@ class FirestoreService {
     try {
       var x = await sqlService.insertBuyItem(item, listId); // Forcer l'écriture
       print(
-        'Article ajouté avec succès, ID: ${x}',
+        'Article ajouté avec succès, ID: $x',
       ); // Afficher l'ID de l'article ajouté
     } catch (e) {
       print('Erreur lors de l\'ajout de l\'article "${item.name}": $e');

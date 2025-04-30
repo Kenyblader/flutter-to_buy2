@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:to_buy/components/login_form.dart';
 import 'package:to_buy/components/register_form.dart';
 import 'package:to_buy/provider/auth_provider.dart';
@@ -71,17 +70,6 @@ class _LoginRegisterScreenState extends ConsumerState<LoginRegisterScreen> {
         });
       } else {
         error = await authService.signUpWithEmail(email, password);
-        if (error == null) {
-          // Attendre que l'utilisateur soit déconnecté
-          await Future.delayed(const Duration(milliseconds: 1000));
-          if (FirebaseAuth.instance.currentUser == null) {
-            // Passer à l'écran de connexion après inscription
-            toggleForm();
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Inscription réussie !')),
-            );
-          }
-        }
       }
       setState(() {
         isSubmitting = false; // Terminer la soumission
