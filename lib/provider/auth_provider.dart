@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:to_buy/models/user.dart';
+import 'package:to_buy/services/firestore_service.dart';
 import 'package:to_buy/services/sqligthServices.dart';
 
 // Provider pour écouter l'état de l'utilisateur
@@ -13,7 +14,7 @@ final authProvider = Provider<AuthService>((ref) {
 });
 
 class AuthService {
-  var service = DatabaseHelper.instance;
+  var service = FirestoreService();
   static String userId = '';
   // Connexion avec email et mot de passe
   Future<String?> signInWithEmail(String email, String password) async {
@@ -26,6 +27,7 @@ class AuthService {
       return null; // Pas d'erreur
       // Pas d'erreur
     } on Exception catch (e) {
+      print("erreur de connexion: ${e.toString()}");
       return e.toString();
     }
   }
@@ -37,6 +39,7 @@ class AuthService {
       // Déconnexion automatique après inscription
       return null; // Pas d'erreur
     } on Exception catch (e) {
+      print("erreur d'incription: ${e.toString()}");
       return e.toString();
     }
   }

@@ -1,14 +1,22 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:speech_to_text/speech_recognition_result.dart';
+import 'package:speech_to_text/speech_to_text.dart';
+import 'package:to_buy/components/record_widget.dart';
 import 'package:to_buy/components/style_button.dart';
 import 'package:to_buy/models/buy_item.dart';
 import 'package:to_buy/models/buy_list.dart';
+import 'package:to_buy/screens/audioListForm.dart';
 import 'package:to_buy/services/firestore_service.dart';
 import 'package:to_buy/services/geminService.dart';
 import 'package:to_buy/validators/add_form_validators.dart';
 import 'package:provider/provider.dart';
 import 'package:to_buy/provider/theme_provider.dart';
+import 'package:just_audio/just_audio.dart' as ap;
+import 'package:flutter_sound_record/flutter_sound_record.dart';
 
 class ItemFormScreen extends StatefulWidget {
   final BuyItem? item;
@@ -23,6 +31,7 @@ class _ItemFormState extends State<ItemFormScreen> {
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
   final List<Map<String, dynamic>> _items = [];
+  final List<Map<String, dynamic>> _AIitems = [];
   final List<ItemPropose> iaItem = [];
   double _total = 0.0;
   List<BuyItem> _existingItems = [];
@@ -32,7 +41,6 @@ class _ItemFormState extends State<ItemFormScreen> {
   @override
   void initState() {
     super.initState();
-    _addItemRow();
     _loadExistingItems();
   }
 
@@ -63,6 +71,21 @@ class _ItemFormState extends State<ItemFormScreen> {
   }
 
   void _addItemRow() {
+    setState(() {
+      _items.add({
+        'name': TextEditingController(),
+        'price': TextEditingController(),
+        'quantity': TextEditingController(),
+        'existingItem':
+            null, // Référence au BuyItem existant (ou null pour nouvel article)
+      });
+    });
+    if (_items.length > 2) {
+      askGeminiSuggestion();
+    }
+  }
+
+  askGeminiSuggestion() {
     try {
       Geminservice().getItemsWithOrder(
         _items.map((e) {
@@ -77,15 +100,6 @@ class _ItemFormState extends State<ItemFormScreen> {
     } catch (e) {
       print("erreur Gemini: $e");
     }
-    setState(() {
-      _items.add({
-        'name': TextEditingController(),
-        'price': TextEditingController(),
-        'quantity': TextEditingController(),
-        'existingItem':
-            null, // Référence au BuyItem existant (ou null pour nouvel article)
-      });
-    });
   }
 
   void _calculateTotal() {
@@ -232,7 +246,7 @@ class _ItemFormState extends State<ItemFormScreen> {
                 .toList();
 
         setState(() {
-          _items.addAll(
+          _AIitems.addAll(
             items.map((item) {
               final itemName = item.name.trim().toLowerCase();
               final existingItem = _existingItemsMap[itemName];
@@ -261,34 +275,6 @@ class _ItemFormState extends State<ItemFormScreen> {
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<Themeprovider>(context, listen: false);
 
-    try {
-      if (_items.isNotEmpty &&
-          _items.every((item) {
-            return item['name']?.text != null &&
-                item['price']?.text != null &&
-                item['quantity']?.text != null &&
-                item['name']!.text.isNotEmpty &&
-                item['price']!.text.isNotEmpty &&
-                item['quantity']!.text.isNotEmpty;
-          })) {
-        Geminservice().getItemsWithOrder(
-          _items
-              .map(
-                (e) => BuyItem(
-                  name: e['name']?.text as String,
-                  price: double.tryParse(e['price']?.text as String) ?? 0.0,
-                  quantity:
-                      double.tryParse(e['quantity']?.text as String) ?? 0.0,
-                ),
-              )
-              .toList(),
-          proposeValue,
-        );
-      }
-    } catch (e) {
-      print("erreur Gemini: $e");
-    }
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Créer une liste de courses'),
@@ -302,12 +288,19 @@ class _ItemFormState extends State<ItemFormScreen> {
         ),
         actions: [
           IconButton(
-            onPressed: () {
-              Navigator.of(context).popUntil((route) => route.isFirst);
+            onPressed: () async {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (builder) => Audiolistform()),
+              );
             },
-            icon: const Icon(Icons.home, color: Colors.white),
+            icon: const Icon(
+              Icons.spatial_audio_off_sharp,
+              color: Colors.white,
+            ),
           ),
         ],
+        iconTheme: IconThemeData(size: 40),
       ),
       body: SingleChildScrollView(
         child: Padding(
