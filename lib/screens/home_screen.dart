@@ -23,7 +23,9 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  static const _floatingWidgetChannel = MethodChannel('com.example.to_buy/floating_widget');
+  static const _floatingWidgetChannel = MethodChannel(
+    'com.example.to_buy/floating_widget',
+  );
   bool _isFloatingWidgetActive = false;
   bool isLoading = true;
   final _searchController = TextEditingController();
@@ -58,7 +60,7 @@ class _HomeScreenState extends State<HomeScreen> {
         _filteredItems.clear();
         _filteredItems.addAll(
           items.where(
-                (item) => item.name.toLowerCase().contains(query.toLowerCase()),
+            (item) => item.name.toLowerCase().contains(query.toLowerCase()),
           ),
         );
       }
@@ -83,23 +85,20 @@ class _HomeScreenState extends State<HomeScreen> {
       } else {
         final shouldProceed = await showDialog<bool>(
           context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Permission requise'),
-            content: const Text(
-              'Pour afficher un bouton flottant par-dessus d\'autres applications, '
+          builder:
+              (context) => AlertDialog(
+                title: const Text('Permission requise'),
+                content: const Text(
+                  'Pour afficher un bouton flottant par-dessus d\'autres applications, '
                   'vous devez accorder la permission d\'affichage. Voulez-vous continuer ?',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Annuler'),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: const Text('Annuler'),
+                  ),
+                ],
               ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('Continuer'),
-              ),
-            ],
-          ),
         );
         if (shouldProceed != true) return;
 
@@ -153,7 +152,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     MaterialPageRoute(
                       builder: (context) => LoginRegisterScreen(),
                     ),
-                        (predicate) => false,
+                    (predicate) => false,
                   );
                 });
               },
@@ -186,7 +185,9 @@ class _HomeScreenState extends State<HomeScreen> {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const ItemListAllScreen()),
+                MaterialPageRoute(
+                  builder: (context) => const ItemListAllScreen(),
+                ),
               );
             },
           ),
@@ -223,14 +224,15 @@ class _HomeScreenState extends State<HomeScreen> {
               leading: const Icon(Icons.settings, color: Colors.blueAccent),
               title: const Text('Paramètres'),
               onTap: () {
-                ListifyWidgetManager.updateHeadline(
-                  BuyList(name: "parmBuyList", description: "description param"),
-                );
+                ListifyWidgetManager.updateHeadline();
                 print("HomeScreen Modifier");
               },
             ),
             ListTile(
-              leading: const Icon(Icons.account_circle, color: Colors.blueAccent),
+              leading: const Icon(
+                Icons.account_circle,
+                color: Colors.blueAccent,
+              ),
               title: const Text('Mon Compte'),
               onTap: () async {
                 var x = await HomeWidget.saveWidgetData("id", "string");
@@ -238,9 +240,10 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
             ListTile(
-              leading: themeProvider.isDark
-                  ? const Icon(Icons.light_mode, color: Colors.blueAccent)
-                  : const Icon(Icons.dark_mode, color: Colors.blueAccent),
+              leading:
+                  themeProvider.isDark
+                      ? const Icon(Icons.light_mode, color: Colors.blueAccent)
+                      : const Icon(Icons.dark_mode, color: Colors.blueAccent),
               title: Text(themeProvider.isDark ? 'Mode Sombre' : 'Mode Clair'),
               onTap: () {
                 themeProvider.toggleTheme();
@@ -252,7 +255,10 @@ class _HomeScreenState extends State<HomeScreen> {
               onTap: () {},
             ),
             ListTile(
-              leading: const Icon(Icons.contact_support, color: Colors.blueAccent),
+              leading: const Icon(
+                Icons.contact_support,
+                color: Colors.blueAccent,
+              ),
               title: const Text('Aide'),
               onTap: () {},
             ),
@@ -261,7 +267,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 _isFloatingWidgetActive ? Icons.close : Icons.bubble_chart,
                 color: _isFloatingWidgetActive ? Colors.red : Colors.blueAccent,
               ),
-              title: Text(_isFloatingWidgetActive ? 'Désactiver Bouton Flottant' : 'Activer Bouton Flottant'),
+              title: Text(
+                _isFloatingWidgetActive
+                    ? 'Désactiver Bouton Flottant'
+                    : 'Activer Bouton Flottant',
+              ),
               onTap: _toggleFloatingWidget,
             ),
             ListTile(
@@ -272,119 +282,177 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator(color: Colors.blueAccent))
-          : Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                labelText: 'Rechercher une liste',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                prefixIcon: const Icon(Icons.search, color: Colors.blueAccent),
-                filled: true,
-                fillColor: Colors.grey[100],
-              ),
-            ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: _filteredItems.isEmpty
-                  ? const Center(
-                child: Text(
-                  'Aucune liste de courses pour le moment',
-                  style: TextStyle(fontSize: 18, color: Colors.grey),
-                ),
+      body:
+          isLoading
+              ? const Center(
+                child: CircularProgressIndicator(color: Colors.blueAccent),
               )
-                  : ListView.builder(
-                itemCount: _filteredItems.length,
-                itemBuilder: (context, index) {
-                  return Dismissible(
-                    key: ValueKey(_filteredItems[index].id),
-                    direction: DismissDirection.endToStart,
-                    background: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                      decoration: const BoxDecoration(color: Colors.red),
-                      alignment: Alignment.centerRight,
-                      child: const Icon(Icons.delete, color: Colors.white),
+              : Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  children: [
+                    TextField(
+                      controller: _searchController,
+                      decoration: InputDecoration(
+                        labelText: 'Rechercher une liste',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        prefixIcon: const Icon(
+                          Icons.search,
+                          color: Colors.blueAccent,
+                        ),
+                        filled: true,
+                        fillColor: Colors.grey[100],
+                      ),
                     ),
-                    confirmDismiss: (direction) {
-                      return showDialog<bool>(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          title: const Text('Supprimer la liste'),
-                          content: const Text(
-                            'Êtes-vous sûr de vouloir supprimer cette liste ?',
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context, false),
-                              child: const Text('Non'),
-                            ),
-                            TextButton(
-                              onPressed: () {
-                                fireSoreService
-                                    .deleteBuyList(_filteredItems[index].id!)
-                                    .then((val) {
-                                  setState(() {
-                                    items.removeAt(index);
-                                    _filteredItems.removeAt(index);
-                                  });
-                                }).catchError((e) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('Erreur : $e')),
+                    const SizedBox(height: 16),
+                    Expanded(
+                      child:
+                          _filteredItems.isEmpty
+                              ? const Center(
+                                child: Text(
+                                  'Aucune liste de courses pour le moment',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                              )
+                              : ListView.builder(
+                                itemCount: _filteredItems.length,
+                                itemBuilder: (context, index) {
+                                  return Dismissible(
+                                    key: ValueKey(_filteredItems[index].id),
+                                    direction: DismissDirection.endToStart,
+                                    background: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                      ),
+                                      decoration: const BoxDecoration(
+                                        color: Colors.red,
+                                      ),
+                                      alignment: Alignment.centerRight,
+                                      child: const Icon(
+                                        Icons.delete,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    confirmDismiss: (direction) {
+                                      return showDialog<bool>(
+                                        context: context,
+                                        builder:
+                                            (context) => AlertDialog(
+                                              title: const Text(
+                                                'Supprimer la liste',
+                                              ),
+                                              content: const Text(
+                                                'Êtes-vous sûr de vouloir supprimer cette liste ?',
+                                              ),
+                                              actions: [
+                                                TextButton(
+                                                  onPressed:
+                                                      () => Navigator.pop(
+                                                        context,
+                                                        false,
+                                                      ),
+                                                  child: const Text('Non'),
+                                                ),
+                                                TextButton(
+                                                  onPressed: () {
+                                                    fireSoreService
+                                                        .deleteBuyList(
+                                                          _filteredItems[index]
+                                                              .id!,
+                                                        )
+                                                        .then((val) {
+                                                          setState(() {
+                                                            items.removeAt(
+                                                              index,
+                                                            );
+                                                            _filteredItems
+                                                                .removeAt(
+                                                                  index,
+                                                                );
+                                                          });
+                                                        })
+                                                        .catchError((e) {
+                                                          ScaffoldMessenger.of(
+                                                            context,
+                                                          ).showSnackBar(
+                                                            SnackBar(
+                                                              content: Text(
+                                                                'Erreur : $e',
+                                                              ),
+                                                            ),
+                                                          );
+                                                        });
+                                                    Navigator.pop(
+                                                      context,
+                                                      true,
+                                                    );
+                                                  },
+                                                  child: const Text('Oui'),
+                                                ),
+                                              ],
+                                            ),
+                                      );
+                                    },
+                                    child: Card(
+                                      elevation: 3,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      margin: const EdgeInsets.symmetric(
+                                        vertical: 8,
+                                      ),
+                                      child: ListTile(
+                                        title: Text(
+                                          _filteredItems[index].name,
+                                          style: const TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        subtitle: Text(
+                                          _filteredItems[index].description ??
+                                              "",
+                                          style: const TextStyle(fontSize: 14),
+                                        ),
+                                        trailing: const Icon(
+                                          Icons.arrow_forward_ios,
+                                          color: Colors.blueAccent,
+                                        ),
+                                        leading:
+                                            _filteredItems[index].isComplete
+                                                ? const Icon(
+                                                  Icons.check,
+                                                  color: Colors.green,
+                                                )
+                                                : null,
+                                        onTap:
+                                            () => Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder:
+                                                    (
+                                                      context,
+                                                    ) => ListDetailScreen(
+                                                      listId:
+                                                          _filteredItems[index]
+                                                              .id!,
+                                                    ),
+                                              ),
+                                            ),
+                                      ),
+                                    ),
                                   );
-                                });
-                                Navigator.pop(context, true);
-                              },
-                              child: const Text('Oui'),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                    child: Card(
-                      elevation: 3,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      margin: const EdgeInsets.symmetric(vertical: 8),
-                      child: ListTile(
-                        title: Text(
-                          _filteredItems[index].name,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        subtitle: Text(
-                          _filteredItems[index].description ?? "",
-                          style: const TextStyle(fontSize: 14),
-                        ),
-                        trailing: const Icon(Icons.arrow_forward_ios, color: Colors.blueAccent),
-                        leading: _filteredItems[index].isComplete
-                            ? const Icon(Icons.check, color: Colors.green)
-                            : null,
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => ListDetailScreen(
-                              listId: _filteredItems[index].id!,
-                            ),
-                          ),
-                        ),
-                      ),
+                                },
+                              ),
                     ),
-                  );
-                },
+                  ],
+                ),
               ),
-            ),
-          ],
-        ),
-      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
           // Attendre le résultat de ItemFormScreen

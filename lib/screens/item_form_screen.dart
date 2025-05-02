@@ -26,7 +26,8 @@ class _ItemFormState extends State<ItemFormScreen> {
   final List<ItemPropose> iaItem = [];
   double _total = 0.0;
   List<BuyItem> _existingItems = [];
-  Map<String, BuyItem> _existingItemsMap = {}; // Map pour recherche rapide par nom
+  Map<String, BuyItem> _existingItemsMap =
+      {}; // Map pour recherche rapide par nom
 
   @override
   void initState() {
@@ -45,8 +46,11 @@ class _ItemFormState extends State<ItemFormScreen> {
           for (var item in buyList.items) {
             // Si cet article n'existe pas encore dans notre map ou si sa date est plus récente
             if (!_existingItemsMap.containsKey(item.name.toLowerCase()) ||
-                (item.date != null && _existingItemsMap[item.name.toLowerCase()]!.date != null &&
-                    item.date!.isAfter(_existingItemsMap[item.name.toLowerCase()]!.date!))) {
+                (item.date != null &&
+                    _existingItemsMap[item.name.toLowerCase()]!.date != null &&
+                    item.date!.isAfter(
+                      _existingItemsMap[item.name.toLowerCase()]!.date!,
+                    ))) {
               _existingItemsMap[item.name.toLowerCase()] = item;
             }
           }
@@ -59,12 +63,27 @@ class _ItemFormState extends State<ItemFormScreen> {
   }
 
   void _addItemRow() {
+    try {
+      Geminservice().getItemsWithOrder(
+        _items.map((e) {
+          return BuyItem(
+            name: e['name']?.text as String,
+            price: double.parse(e['price']?.text as String),
+            quantity: double.parse(e['quantity']?.text as String),
+          );
+        }).toList(),
+        proposeValue,
+      );
+    } catch (e) {
+      print("erreur Gemini: $e");
+    }
     setState(() {
       _items.add({
         'name': TextEditingController(),
         'price': TextEditingController(),
         'quantity': TextEditingController(),
-        'existingItem': null, // Référence au BuyItem existant (ou null pour nouvel article)
+        'existingItem':
+            null, // Référence au BuyItem existant (ou null pour nouvel article)
       });
     });
   }
@@ -97,7 +116,8 @@ class _ItemFormState extends State<ItemFormScreen> {
         final existingItem = _existingItemsMap[itemName]!;
         _items[index]['existingItem'] = existingItem;
         _items[index]['price']!.text = existingItem.price.toString();
-        _items[index]['quantity']!.text = "1.0"; // Réinitialiser la quantité à 1
+        _items[index]['quantity']!.text =
+            "1.0"; // Réinitialiser la quantité à 1
         _calculateTotal();
       });
     }
@@ -108,50 +128,66 @@ class _ItemFormState extends State<ItemFormScreen> {
       // Construire une liste temporaire pour vérifier les doublons dans la soumission actuelle
       final Map<String, int> currentSubmissionItems = {};
 
-      final items = _items.asMap().entries.map((entry) {
-        final index = entry.key;
-        final item = entry.value;
-        final itemName = item['name']!.text.trim();
+      final items =
+          _items
+              .asMap()
+              .entries
+              .map((entry) {
+                final index = entry.key;
+                final item = entry.value;
+                final itemName = item['name']!.text.trim();
 
-        // Vérifier si cet article a déjà été inclus dans cette soumission
-        if (currentSubmissionItems.containsKey(itemName.toLowerCase())) {
-          // Article déjà dans la liste courante, fusionner les quantités
-          final existingIndex = currentSubmissionItems[itemName.toLowerCase()]!;
-          final existingQuantity = double.parse(_items[existingIndex]['quantity']!.text);
-          final newQuantity = double.parse(item['quantity']!.text);
+                // Vérifier si cet article a déjà été inclus dans cette soumission
+                if (currentSubmissionItems.containsKey(
+                  itemName.toLowerCase(),
+                )) {
+                  // Article déjà dans la liste courante, fusionner les quantités
+                  final existingIndex =
+                      currentSubmissionItems[itemName.toLowerCase()]!;
+                  final existingQuantity = double.parse(
+                    _items[existingIndex]['quantity']!.text,
+                  );
+                  final newQuantity = double.parse(item['quantity']!.text);
 
-          // Mettre à jour la quantité de l'article existant
-          _items[existingIndex]['quantity']!.text = (existingQuantity + newQuantity).toString();
+                  // Mettre à jour la quantité de l'article existant
+                  _items[existingIndex]['quantity']!.text =
+                      (existingQuantity + newQuantity).toString();
 
-          // Retourner null pour indiquer que cet article a été fusionné
-          return null;
-        } else {
-          // Marquer cet article comme inclus dans cette soumission
-          currentSubmissionItems[itemName.toLowerCase()] = index;
+                  // Retourner null pour indiquer que cet article a été fusionné
+                  return null;
+                } else {
+                  // Marquer cet article comme inclus dans cette soumission
+                  currentSubmissionItems[itemName.toLowerCase()] = index;
 
-          // Si un article existant a été sélectionné via autocomplétion
-          if (item['existingItem'] != null) {
-            BuyItem existing = item['existingItem'] as BuyItem;
-            return BuyItem(
-              id: existing.id, // Conserver l'ID pour réutiliser l'article existant
-              name: itemName,
-              price: double.parse(item['price']!.text),
-              quantity: double.parse(item['quantity']!.text),
-              date: DateTime.now(), // Mettre à jour la date
-            );
-          } else {
-            // Nouvel article ou article existant identifié par nom
-            final existingByName = _existingItemsMap[itemName.toLowerCase()];
-            return BuyItem(
-              id: existingByName?.id, // Réutiliser l'ID s'il existe
-              name: itemName,
-              price: double.parse(item['price']!.text),
-              quantity: double.parse(item['quantity']!.text),
-              date: DateTime.now(),
-            );
-          }
-        }
-      }).where((item) => item != null).cast<BuyItem>().toList();
+                  // Si un article existant a été sélectionné via autocomplétion
+                  if (item['existingItem'] != null) {
+                    BuyItem existing = item['existingItem'] as BuyItem;
+                    return BuyItem(
+                      id:
+                          existing
+                              .id, // Conserver l'ID pour réutiliser l'article existant
+                      name: itemName,
+                      price: double.parse(item['price']!.text),
+                      quantity: double.parse(item['quantity']!.text),
+                      date: DateTime.now(), // Mettre à jour la date
+                    );
+                  } else {
+                    // Nouvel article ou article existant identifié par nom
+                    final existingByName =
+                        _existingItemsMap[itemName.toLowerCase()];
+                    return BuyItem(
+                      id: existingByName?.id, // Réutiliser l'ID s'il existe
+                      name: itemName,
+                      price: double.parse(item['price']!.text),
+                      quantity: double.parse(item['quantity']!.text),
+                      date: DateTime.now(),
+                    );
+                  }
+                }
+              })
+              .where((item) => item != null)
+              .cast<BuyItem>()
+              .toList();
 
       final buyList = BuyList(
         name: _nameController.text,
@@ -161,14 +197,14 @@ class _ItemFormState extends State<ItemFormScreen> {
 
       try {
         await FirestoreService().addBuyList(buyList, items);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Liste créée !')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Liste créée !')));
         Navigator.pop(context, buyList);
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur : $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Erreur : $e')));
       }
     }
   }
@@ -188,9 +224,12 @@ class _ItemFormState extends State<ItemFormScreen> {
       List<ItemPropose> items = [];
 
       if (jsonData.containsKey("items") && jsonData["items"] is List) {
-        items = (jsonData["items"] as List)
-            .map((data) => ItemPropose.fromJson(data as Map<String, dynamic>))
-            .toList();
+        items =
+            (jsonData["items"] as List)
+                .map(
+                  (data) => ItemPropose.fromJson(data as Map<String, dynamic>),
+                )
+                .toList();
 
         setState(() {
           _items.addAll(
@@ -201,8 +240,11 @@ class _ItemFormState extends State<ItemFormScreen> {
               return {
                 'name': TextEditingController(text: item.name),
                 'price': TextEditingController(
-                    text: existingItem?.price.toString() ?? item.price.toString()),
-                'quantity': TextEditingController(text: item.quantity.toString()),
+                  text: existingItem?.price.toString() ?? item.price.toString(),
+                ),
+                'quantity': TextEditingController(
+                  text: item.quantity.toString(),
+                ),
                 'existingItem': existingItem,
               };
             }).toList(),
@@ -220,23 +262,25 @@ class _ItemFormState extends State<ItemFormScreen> {
     final themeProvider = Provider.of<Themeprovider>(context, listen: false);
 
     try {
-      if (_items.isNotEmpty && _items.every((item) {
-        return item['name']?.text != null &&
-            item['price']?.text != null &&
-            item['quantity']?.text != null &&
-            item['name']!.text.isNotEmpty &&
-            item['price']!.text.isNotEmpty &&
-            item['quantity']!.text.isNotEmpty;
-      })) {
+      if (_items.isNotEmpty &&
+          _items.every((item) {
+            return item['name']?.text != null &&
+                item['price']?.text != null &&
+                item['quantity']?.text != null &&
+                item['name']!.text.isNotEmpty &&
+                item['price']!.text.isNotEmpty &&
+                item['quantity']!.text.isNotEmpty;
+          })) {
         Geminservice().getItemsWithOrder(
           _items
               .map(
                 (e) => BuyItem(
-              name: e['name']?.text as String,
-              price: double.tryParse(e['price']?.text as String) ?? 0.0,
-              quantity: double.tryParse(e['quantity']?.text as String) ?? 0.0,
-            ),
-          )
+                  name: e['name']?.text as String,
+                  price: double.tryParse(e['price']?.text as String) ?? 0.0,
+                  quantity:
+                      double.tryParse(e['quantity']?.text as String) ?? 0.0,
+                ),
+              )
               .toList(),
           proposeValue,
         );
@@ -249,7 +293,8 @@ class _ItemFormState extends State<ItemFormScreen> {
       appBar: AppBar(
         title: const Text('Créer une liste de courses'),
         backgroundColor:
-        themeProvider.themeData.appBarTheme.backgroundColor ?? Colors.blueAccent,
+            themeProvider.themeData.appBarTheme.backgroundColor ??
+            Colors.blueAccent,
         centerTitle: true,
         leading: IconButton(
           onPressed: () => Navigator.pop(context),
@@ -308,32 +353,46 @@ class _ItemFormState extends State<ItemFormScreen> {
                           Expanded(
                             flex: 2,
                             child: Autocomplete<BuyItem>(
-                              optionsBuilder: (TextEditingValue textEditingValue) {
+                              optionsBuilder: (
+                                TextEditingValue textEditingValue,
+                              ) {
                                 if (textEditingValue.text.isEmpty) {
                                   return const Iterable<BuyItem>.empty();
                                 }
                                 return _existingItems.where((BuyItem item) {
-                                  return item.name
-                                      .toLowerCase()
-                                      .contains(textEditingValue.text.toLowerCase());
+                                  return item.name.toLowerCase().contains(
+                                    textEditingValue.text.toLowerCase(),
+                                  );
                                 });
                               },
-                              displayStringForOption: (BuyItem item) => item.name,
+                              displayStringForOption:
+                                  (BuyItem item) => item.name,
                               onSelected: (BuyItem selected) {
                                 setState(() {
                                   controllers['name']!.text = selected.name;
-                                  controllers['price']!.text = selected.price.toString();
+                                  controllers['price']!.text =
+                                      selected.price.toString();
                                   controllers['existingItem'] = selected;
                                   _calculateTotal();
                                 });
                               },
-                              fieldViewBuilder: (context, textEditingController, focusNode, onFieldSubmitted) {
-                                textEditingController.text = controllers['name']!.text;
+                              fieldViewBuilder: (
+                                context,
+                                textEditingController,
+                                focusNode,
+                                onFieldSubmitted,
+                              ) {
+                                textEditingController.text =
+                                    controllers['name']!.text;
                                 textEditingController.addListener(() {
-                                  controllers['name']!.text = textEditingController.text;
+                                  controllers['name']!.text =
+                                      textEditingController.text;
                                   // Réinitialiser existingItem si le nom est modifié manuellement
                                   if (controllers['existingItem'] != null &&
-                                      textEditingController.text != (controllers['existingItem'] as BuyItem).name) {
+                                      textEditingController.text !=
+                                          (controllers['existingItem']
+                                                  as BuyItem)
+                                              .name) {
                                     controllers['existingItem'] = null;
                                   }
                                   _calculateTotal();
@@ -352,7 +411,8 @@ class _ItemFormState extends State<ItemFormScreen> {
                                     _checkForExistingItem(index);
                                     _calculateTotal();
                                   },
-                                  onEditingComplete: () => _checkForExistingItem(index),
+                                  onEditingComplete:
+                                      () => _checkForExistingItem(index),
                                 );
                               },
                             ),
@@ -411,8 +471,9 @@ class _ItemFormState extends State<ItemFormScreen> {
                 Text(
                   'Total: ${_total.toStringAsFixed(2)} Fcfa',
                   style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold),
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 Center(
@@ -456,12 +517,14 @@ class ItemPropose {
     try {
       return ItemPropose(
         name: data['name'] as String,
-        price: (data['price'] is int)
-            ? (data['price'] as int).toDouble()
-            : data['price'] as double,
-        quantity: (data['quantity'] is int)
-            ? (data['quantity'] as int).toDouble()
-            : data['quantity'] as double,
+        price:
+            (data['price'] is int)
+                ? (data['price'] as int).toDouble()
+                : data['price'] as double,
+        quantity:
+            (data['quantity'] is int)
+                ? (data['quantity'] as int).toDouble()
+                : data['quantity'] as double,
       );
     } catch (e) {
       print("Erreur lors de la conversion ItemPropose: $e");

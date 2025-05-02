@@ -1,17 +1,14 @@
 import 'dart:convert';
 
-import 'package:flutter/cupertino.dart';
 import 'package:home_widget/home_widget.dart';
-import 'package:to_buy/models/buy_list.dart';
 import 'package:to_buy/services/firestore_service.dart';
 
 class ListifyWidgetManager {
   static final String _appGroupId = 'GroupId1'; // Add from here
-  static final String _iOSWidgetName = 'NewsWidgets';
   static final String _androidWidgetName = 'ListifyWidget';
   static final fireStore = FirestoreService();
 
-  static updateHeadline(BuyList newHeadline) {
+  static updateHeadline() {
     // Add from here
     var buylist = fireStore.getBuyLists();
     buylist.listen((onData) {
