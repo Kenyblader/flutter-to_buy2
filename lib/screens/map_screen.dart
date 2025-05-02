@@ -14,8 +14,10 @@ class MapScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'FlutterMap Demo',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
+
         colorSchemeSeed: const Color(0xFF8dea88),
       ),
       home: const SimpleMapPage(),
@@ -47,8 +49,11 @@ class _SimpleMapPageState extends State<SimpleMapPage> {
   Future<void> _getUserLocation() async {
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Location services are disabled. Please enable them.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Location services are disabled. Please enable them.'),
+        ),
+      );
       return;
     }
 
@@ -57,14 +62,18 @@ class _SimpleMapPageState extends State<SimpleMapPage> {
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Location permissions are denied')));
+          const SnackBar(content: Text('Location permissions are denied')),
+        );
         return;
       }
     }
 
     if (permission == LocationPermission.deniedForever) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Location permissions are permanently denied.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Location permissions are permanently denied.'),
+        ),
+      );
       return;
     }
 
@@ -78,22 +87,28 @@ class _SimpleMapPageState extends State<SimpleMapPage> {
       });
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error getting location: ${e.toString()}')));
+        SnackBar(content: Text('Error getting location: ${e.toString()}')),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final markers = _currentPosition == null
-        ? <Marker>[]
-        : [
-            Marker(
-              point: _currentPosition!,
-              width: 80,
-              height: 80,
-              child: const Icon(Icons.location_on, color: Colors.red, size: 40),
-            ),
-          ];
+    final markers =
+        _currentPosition == null
+            ? <Marker>[]
+            : [
+              Marker(
+                point: _currentPosition!,
+                width: 80,
+                height: 80,
+                child: const Icon(
+                  Icons.location_on,
+                  color: Colors.red,
+                  size: 40,
+                ),
+              ),
+            ];
 
     return Scaffold(
       appBar: AppBar(title: const Text('FlutterMap avec Zoom')),
@@ -114,7 +129,9 @@ class _SimpleMapPageState extends State<SimpleMapPage> {
               },
             ),
             children: [
-              TileLayer(urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'),
+              TileLayer(
+                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+              ),
               MarkerLayer(markers: markers),
             ],
           ),

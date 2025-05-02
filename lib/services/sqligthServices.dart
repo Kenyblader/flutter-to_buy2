@@ -21,7 +21,7 @@ class DatabaseHelper {
   // Initialiser la base de données
   Future<Database> _initDB(String fileName) async {
     String path = join(await getDatabasesPath(), fileName);
-    await deleteDatabase(path);
+    // await deleteDatabase(path);
     // Delete the existing database file to force recreation
     return await openDatabase(path, version: 1, onCreate: _createDB);
   }
