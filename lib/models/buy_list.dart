@@ -1,31 +1,35 @@
 import 'package:to_buy/models/buy_item.dart';
+import 'package:to_buy/models/syncable.dart';
+import 'package:uuid/uuid.dart';
 
-class BuyList {
-  String? id;
+class BuyList implements Syncable {
+  @override
+  String id;
   String name;
   String description;
   DateTime date;
   DateTime? expirationDate;
   List<BuyItem> items;
-
-  BuyList.empty()
-    : id = null,
-      name = '',
-      description = '',
-      date = DateTime.now(),
-      expirationDate = null,
-      items = [];
+  @override
+  DateTime lastModified;
+  @override
+  bool isDeleted;
+  @override
+  String syncStatus;
 
   BuyList({
-    this.id,
+    String? id,
     required this.name,
     required this.description,
     DateTime? date,
     this.expirationDate,
     this.items = const [],
-  }) : date = date ?? DateTime.now() {
-    id ??= DateTime.now().hashCode.toString();
-  }
+    DateTime? lastModified,
+    this.isDeleted = false,
+    this.syncStatus = 'pending',
+  }) : date = date ?? DateTime.now(),
+       id = id ?? Uuid().v4(),
+       lastModified = lastModified ?? DateTime.now();
 
   double get total => items.fold(0.0, (sum, item) => sum + item.getTotal());
 
@@ -36,6 +40,7 @@ class BuyList {
     return true;
   }
 
+  @override
   Map<String, dynamic> toMap() {
     return {
       'id': id,
@@ -43,6 +48,9 @@ class BuyList {
       'description': description,
       'date': date.toUtc().toString(),
       'expirationDate': expirationDate?.toIso8601String(),
+      'last_modified': lastModified.toIso8601String(),
+      'is_deleted': isDeleted ? 1 : 0,
+      'sync_status': syncStatus,
     };
   }
 
@@ -56,6 +64,9 @@ class BuyList {
           map['expirationDate'] != null
               ? DateTime.parse(map['expirationDate'])
               : null,
+      lastModified: DateTime.parse(map['last_modified']),
+      isDeleted: map['is_deleted'] == 1,
+      syncStatus: map['sync_status'],
       items: items,
     );
   }
@@ -71,42 +82,21 @@ class BuyList {
           json['expirationDate'] != null
               ? DateTime.parse(json['expirationDate'] as String)
               : null,
+      lastModified: DateTime.parse(json['last_modified']),
+      isDeleted: json['is_deleted'] == 1,
+      syncStatus: json['sync_status'],
       items:
           json['items'] != null
               ? (json['items'] as List)
-                  .map(
-                    (item) => BuyItem(
-                      name: item['name'] as String,
-                      price: (item['price'] as num).toDouble(),
-                      quantity: (item['quantity'] as num).toDouble(),
-                      date: DateTime.parse(item['date'] as String),
-                      isBuy: item['isBuy'] as bool,
-                    ),
-                  )
+                  .map((item) => BuyItem.fromMap(item))
                   .toList()
               : [],
     );
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'name': name,
-      'description': description,
-      'date': date.toIso8601String(),
-      'expirationDate': expirationDate?.toIso8601String(),
-      'items':
-          items
-              .map(
-                (item) => {
-                  'name': item.name,
-                  'price': item.price,
-                  'quantity': item.quantity,
-                  'date': item.date.toIso8601String(),
-                  'isBuy': item.isBuy,
-                },
-              )
-              .toList(),
-    };
+  @override
+  bool hasConflictWith(Syncable other) {
+    if (other is! BuyList) return false;
+    return name != other.name || description != other.description;
   }
 }

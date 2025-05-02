@@ -7,6 +7,7 @@ import 'package:to_buy/models/user.dart';
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
   static Database? _database;
+  factory DatabaseHelper() => instance;
 
   DatabaseHelper._init();
 
@@ -20,57 +21,106 @@ class DatabaseHelper {
   // Initialiser la base de données
   Future<Database> _initDB(String fileName) async {
     String path = join(await getDatabasesPath(), fileName);
+    await deleteDatabase(path);
+    // Delete the existing database file to force recreation
     return await openDatabase(path, version: 1, onCreate: _createDB);
   }
 
-  // Créer les tables avec relations
   Future _createDB(Database db, int version) async {
     // Table users
     await db.execute('''
-      CREATE TABLE users (
-        id TEXT PRIMARY KEY,
-        email TEXT NOT NULL UNIQUE,
-        password TEXT NOT NULL,
-        isActive INTEGER NOT NULL DEFAULT 0
-      )
-    ''');
+    CREATE TABLE users (
+      id TEXT PRIMARY KEY,
+      email TEXT NOT NULL UNIQUE,
+      password TEXT NOT NULL,
+      isActive INTEGER NOT NULL DEFAULT 0,
+      last_modified TEXT NOT NULL,
+      is_deleted INTEGER NOT NULL,
+      sync_status TEXT NOT NULL
+    )
+  ''');
 
     // Table buy_lists
     await db.execute('''
-      CREATE TABLE buy_lists (
-        id TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
-        description TEXT NOT NULL,
-        date TEXT NOT NULL,
-        expirationDate TEXT,
-        userId INTEGER NOT NULL,
-        FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE
-      )
-    ''');
+    CREATE TABLE lists (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT NOT NULL,
+      date TEXT NOT NULL,
+      expirationDate TEXT,
+      userId INTEGER NOT NULL,
+      last_modified TEXT NOT NULL,
+      is_deleted INTEGER NOT NULL,
+      sync_status TEXT NOT NULL,
+      FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE
+    )
+  ''');
 
     // Table buy_items
     await db.execute('''
-      CREATE TABLE buy_items (
-        id TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
-        price REAL NOT NULL,
-        quantity REAL NOT NULL,
-        date TEXT NOT NULL,
-        isBuy INTEGER NOT NULL DEFAULT 0,
-        buyListId TEXT NOT NULL,
-        FOREIGN KEY (buyListId) REFERENCES buy_lists(id) ON DELETE CASCADE
-      )
-    ''');
+    CREATE TABLE items (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      price REAL NOT NULL,
+      quantity REAL NOT NULL,
+      date TEXT NOT NULL,
+      isBuy INTEGER NOT NULL DEFAULT 0,
+      buyListId TEXT NOT NULL,
+      last_modified TEXT NOT NULL,
+      is_deleted INTEGER NOT NULL,
+      sync_status TEXT NOT NULL,
+      FOREIGN KEY (buyListId) REFERENCES buy_lists(id) ON DELETE CASCADE
+    )
+  ''');
 
-    // Index pour optimiser les requêtes
-    await db.execute('CREATE INDEX idx_userId ON buy_lists(userId);');
-    await db.execute('CREATE INDEX idx_buyListId ON buy_items(buyListId);');
+    // Index for optimization
+    await db.execute('CREATE INDEX idx_userId ON lists(userId);');
+    await db.execute('CREATE INDEX idx_buyListId ON items(buyListId);');
   }
 
   // Fermer la base de données
   Future close() async {
     final db = await database;
     db.close();
+  }
+
+  Future<int> insert(String table, Map<String, dynamic> data) async {
+    final db = await database;
+    return await db.insert(
+      table,
+      data,
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getAll(String table) async {
+    final db = await database;
+    return await db.query(table);
+  }
+
+  Future<Map<String, dynamic>?> getById(String table, String id) async {
+    final db = await database;
+    List<Map<String, dynamic>> result = await db.query(
+      table,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    return result.isNotEmpty ? result.first : null;
+  }
+
+  Future<int> update(String table, Map<String, dynamic> data) async {
+    final db = await database;
+    return await db.update(
+      table,
+      data,
+      where: 'id = ?',
+      whereArgs: [data['id']],
+    );
+  }
+
+  Future<int> delete(String table, String id) async {
+    final db = await database;
+    return await db.delete(table, where: 'id = ?', whereArgs: [id]);
   }
 
   // --- CRUD pour User ---
@@ -110,10 +160,12 @@ class DatabaseHelper {
     return await db.delete('users', where: 'id = ?', whereArgs: [id]);
   }
 
-  Future<User?> getActiveUser() async {
+  Future<User> getActiveUser() async {
     final db = await database;
-    final maps = await db.query('users', where: 'isActive = ?', whereArgs: [1]);
-    return maps.isNotEmpty ? User.fromMap(maps.first) : null;
+    final data = await db.query('users', where: 'isActive = true');
+    return data.isNotEmpty
+        ? User.fromMap(data.first)
+        : Future.error("no active user");
   }
 
   // --- CRUD pour BuyList ---
@@ -122,24 +174,30 @@ class DatabaseHelper {
     final db = await database;
     await db.transaction((txn) async {
       // Insérer la BuyList
-      await txn.insert('buy_lists', {
+      await txn.insert('lists', {
         'id': buyList.id ?? DateTime.now().hashCode.toString(),
         'name': buyList.name,
         'description': buyList.description,
         'date': buyList.date.toIso8601String(),
         'expirationDate': buyList.expirationDate?.toIso8601String(),
         'userId': userId,
+        'last_modified': buyList.lastModified.toIso8601String(),
+        'is_deleted': buyList.isDeleted ? 1 : 0,
+        'sync_status': buyList.syncStatus,
       });
 
       // Insérer les BuyItems associés
       for (var item in buyList.items) {
-        await txn.insert('buy_items', {
+        await txn.insert('items', {
           'name': item.name,
           'price': item.price,
           'quantity': item.quantity,
           'date': item.date.toIso8601String(),
           'isBuy': item.isBuy ? 1 : 0,
           'buyListId': buyList.id,
+          'last_modified': item.lastModified.toIso8601String(),
+          'is_deleted': item.isDeleted ? 1 : 0,
+          'sync_status': item.syncStatus,
         });
       }
     });
@@ -148,7 +206,7 @@ class DatabaseHelper {
   Future<List<BuyList>> getBuyListsByUser(String userId) async {
     final db = await database;
     final listMaps = await db.query(
-      'buy_lists',
+      'lists',
       where: 'userId = ?',
       whereArgs: [userId],
     );
@@ -156,7 +214,7 @@ class DatabaseHelper {
     List<BuyList> buyLists = [];
     for (var listMap in listMaps) {
       final itemMaps = await db.query(
-        'buy_items',
+        'items',
         where: 'buyListId = ?',
         whereArgs: [listMap['id']],
       );
@@ -174,7 +232,7 @@ class DatabaseHelper {
     return await db.transaction((txn) async {
       // Mettre à jour la BuyList
       int count = await txn.update(
-        'buy_lists',
+        'lists',
         buyList.toMap(),
         where: 'id = ?',
         whereArgs: [buyList.id],
@@ -182,14 +240,14 @@ class DatabaseHelper {
 
       // Supprimer les anciens BuyItems
       await txn.delete(
-        'buy_items',
+        'items',
         where: 'buyListId = ?',
         whereArgs: [buyList.id],
       );
 
       // Insérer les nouveaux BuyItems
       for (var item in buyList.items) {
-        await txn.insert('buy_items', {
+        await txn.insert('items', {
           'name': item.name,
           'price': item.price,
           'quantity': item.quantity,
@@ -206,14 +264,14 @@ class DatabaseHelper {
   Future<int> deleteBuyList(String id) async {
     final db = await database;
     // Les BuyItems associés seront supprimés grâce à ON DELETE CASCADE
-    return await db.delete('buy_lists', where: 'id = ?', whereArgs: [id]);
+    return await db.delete('lists', where: 'id = ?', whereArgs: [id]);
   }
 
   // --- CRUD pour BuyItem ---
 
   Future<int> insertBuyItem(BuyItem item, String buyListId) async {
     final db = await database;
-    return await db.insert('buy_items', {
+    return await db.insert('items', {
       'name': item.name,
       'price': item.price,
       'quantity': item.quantity,
@@ -226,7 +284,7 @@ class DatabaseHelper {
   Future<List<BuyItem>> getBuyItemsByBuyListId(String buyListId) async {
     final db = await database;
     final itemMaps = await db.query(
-      'buy_items',
+      'items',
       where: 'buyListId = ?',
       whereArgs: [buyListId],
     );
@@ -236,7 +294,7 @@ class DatabaseHelper {
   Future<int> updateBuyItem(BuyItem item) async {
     final db = await database;
     return await db.update(
-      'buy_items',
+      'items',
       item.toMap(),
       where: 'id = ?',
       whereArgs: [item.id],
@@ -245,24 +303,20 @@ class DatabaseHelper {
 
   Future<int> deleteBuyItem(String id) async {
     final db = await database;
-    return await db.delete('buy_items', where: 'id = ?', whereArgs: [id]);
+    return await db.delete('items', where: 'id = ?', whereArgs: [id]);
   }
 
   Future<BuyItem?> getBuyItemById(String id) async {
     final db = await database;
-    final itemMaps = await db.query(
-      'buy_items',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-    print('Item Maps $id : ${itemMaps.toString()}');
-    return itemMaps.isNotEmpty ? BuyItem.fromMap(itemMaps.first) : null;
+    final itemMaps = await db.query('items', where: 'id = ?', whereArgs: [id]);
+    print('Item Maps [$id] : ${itemMaps.toString()}');
+    return itemMaps == [] ? BuyItem.fromMap(itemMaps[0]) : null;
   }
 
   getBuyListById(String listId) async {
     final db = await database;
     final listMaps = await db.query(
-      'buy_lists',
+      'lists',
       where: 'id = ?',
       whereArgs: [listId],
     );
@@ -273,16 +327,32 @@ class DatabaseHelper {
     return null;
   }
 
-  // // --- Méthode pour synchronisation avec backend (optionnel) ---
-  // Future<void> syncBuyListWithBackend(BuyList buyList, String backendUrl) async {
-  //   // Exemple d'envoi au backend via HTTP
-  //   final response = await http.post(
-  //     Uri.parse('$backendUrl/buy_lists'),
-  //     headers: {'Content-Type': 'application/json'},
-  //     body: jsonEncode(buyList.toJson()),
-  //   );
-  //   if (response.statusCode != 201) {
-  //     throw Exception('Échec de la synchronisation : ${response.statusCode}');
-  //   }
-  // }
+  Future<List<Map<String, dynamic>>> getPendingChanges(String table) async {
+    final db = await database;
+    return await db.query(
+      table,
+      where: 'sync_status = ?',
+      whereArgs: ['pending'],
+    );
+  }
+
+  Future<void> markAsSynced(String table, String id) async {
+    final db = await database;
+    await db.update(
+      table,
+      {'sync_status': 'synced'},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<void> markAsConflict(String table, String id) async {
+    final db = await database;
+    await db.update(
+      table,
+      {'sync_status': 'conflict'},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
 }

@@ -1,9 +1,13 @@
 import 'dart:convert';
+import 'dart:io';
 
+import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:to_buy/components/style_button.dart';
 import 'package:to_buy/models/buy_item.dart';
 import 'package:to_buy/models/buy_list.dart';
+import 'package:to_buy/screens/audioListForm.dart';
 import 'package:to_buy/services/firestore_service.dart';
 import 'package:to_buy/services/geminService.dart';
 import 'package:to_buy/validators/add_form_validators.dart';
@@ -23,16 +27,17 @@ class _ItemFormState extends State<ItemFormScreen> {
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
   final List<Map<String, dynamic>> _items = [];
+  final List<Map<String, dynamic>> _AIitems = [];
   final List<ItemPropose> iaItem = [];
   double _total = 0.0;
   List<BuyItem> _existingItems = [];
   Map<String, BuyItem> _existingItemsMap =
       {}; // Map pour recherche rapide par nom
+  final FirebaseAnalytics _analytics = FirebaseAnalytics.instance;
 
   @override
   void initState() {
     super.initState();
-    _addItemRow();
     _loadExistingItems();
   }
 
@@ -63,6 +68,21 @@ class _ItemFormState extends State<ItemFormScreen> {
   }
 
   void _addItemRow() {
+    setState(() {
+      _items.add({
+        'name': TextEditingController(),
+        'price': TextEditingController(),
+        'quantity': TextEditingController(),
+        'existingItem':
+            null, // Référence au BuyItem existant (ou null pour nouvel article)
+      });
+    });
+    if (_items.length > 2) {
+      askGeminiSuggestion();
+    }
+  }
+
+  askGeminiSuggestion() {
     try {
       Geminservice().getItemsWithOrder(
         _items.map((e) {
@@ -77,15 +97,6 @@ class _ItemFormState extends State<ItemFormScreen> {
     } catch (e) {
       print("erreur Gemini: $e");
     }
-    setState(() {
-      _items.add({
-        'name': TextEditingController(),
-        'price': TextEditingController(),
-        'quantity': TextEditingController(),
-        'existingItem':
-            null, // Référence au BuyItem existant (ou null pour nouvel article)
-      });
-    });
   }
 
   void _calculateTotal() {
@@ -189,6 +200,23 @@ class _ItemFormState extends State<ItemFormScreen> {
               .cast<BuyItem>()
               .toList();
 
+      // Enregistrer l'événement add_to_cart pour chaque article
+      for (var item in items) {
+        await _analytics.logAddToCart(
+          currency: 'XAF',
+          value: item.price * item.quantity,
+          items: [
+            AnalyticsEventItem(
+              itemId: item.id ?? item.name.toLowerCase(),
+              itemName: item.name,
+              itemCategory: 'Courses',
+              price: item.price,
+              quantity: item.quantity.toInt(),
+            ),
+          ],
+        );
+      }
+
       final buyList = BuyList(
         name: _nameController.text,
         description: _descriptionController.text,
@@ -232,7 +260,7 @@ class _ItemFormState extends State<ItemFormScreen> {
                 .toList();
 
         setState(() {
-          _items.addAll(
+          _AIitems.addAll(
             items.map((item) {
               final itemName = item.name.trim().toLowerCase();
               final existingItem = _existingItemsMap[itemName];
@@ -261,34 +289,6 @@ class _ItemFormState extends State<ItemFormScreen> {
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<Themeprovider>(context, listen: false);
 
-    try {
-      if (_items.isNotEmpty &&
-          _items.every((item) {
-            return item['name']?.text != null &&
-                item['price']?.text != null &&
-                item['quantity']?.text != null &&
-                item['name']!.text.isNotEmpty &&
-                item['price']!.text.isNotEmpty &&
-                item['quantity']!.text.isNotEmpty;
-          })) {
-        Geminservice().getItemsWithOrder(
-          _items
-              .map(
-                (e) => BuyItem(
-                  name: e['name']?.text as String,
-                  price: double.tryParse(e['price']?.text as String) ?? 0.0,
-                  quantity:
-                      double.tryParse(e['quantity']?.text as String) ?? 0.0,
-                ),
-              )
-              .toList(),
-          proposeValue,
-        );
-      }
-    } catch (e) {
-      print("erreur Gemini: $e");
-    }
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Créer une liste de courses'),
@@ -302,12 +302,19 @@ class _ItemFormState extends State<ItemFormScreen> {
         ),
         actions: [
           IconButton(
-            onPressed: () {
-              Navigator.of(context).popUntil((route) => route.isFirst);
+            onPressed: () async {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (builder) => Audiolistform()),
+              );
             },
-            icon: const Icon(Icons.home, color: Colors.white),
+            icon: const Icon(
+              Icons.spatial_audio_off_sharp,
+              color: Colors.white,
+            ),
           ),
         ],
+        iconTheme: IconThemeData(size: 40),
       ),
       body: SingleChildScrollView(
         child: Padding(

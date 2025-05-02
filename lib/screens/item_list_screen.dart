@@ -1,149 +1,186 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_gemini/flutter_gemini.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:to_buy/models/buy_list.dart';
-import 'package:provider/provider.dart';
-import 'package:to_buy/components/item_list.dart';
 import 'package:to_buy/models/buy_item.dart';
 import 'package:to_buy/models/buy_list.dart';
 import 'package:to_buy/provider/theme_provider.dart';
 import 'package:to_buy/screens/item_form_screen.dart';
-import 'package:to_buy/screens/list_detail_screen.dart';
-import 'package:to_buy/screens/restore_list_screen.dart';
-import 'package:to_buy/services/firestore_service.dart';
+import 'package:to_buy/screens/propse_menu.dart';
 import 'package:provider/provider.dart' as provider;
-import 'package:to_buy/provider/theme_provider.dart';
-import 'package:to_buy/services/geminService.dart';
+import 'package:to_buy/services/firestore_service.dart';
 
-class ItemListScreen extends ConsumerWidget {
+class ItemListScreen extends ConsumerStatefulWidget {
+  final DishModel list;
+
   const ItemListScreen({super.key, required this.list});
-  final BuyList? list;
+  @override
+  ConsumerState<ItemListScreen> createState() => ItemListScreenState();
+}
+
+class ItemListScreenState extends ConsumerState<ItemListScreen> {
+  late final DishModel list;
+  List<BuyItem> _saveditems = [];
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  void initState() {
+    super.initState();
+    list = widget.list;
+  }
+
+  void _onDismissed(int index, DismissDirection direction) {
+    setState(() {
+      if (direction == DismissDirection.startToEnd) {
+        list.ingredients[index].isSelected = true;
+      } else if (direction == DismissDirection.endToStart) {
+        list.ingredients[index].isSelected = false;
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final themeProvider = provider.Provider.of<Themeprovider>(
       context,
       listen: false,
     );
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Mes listes de courses'),
+        title: Text(list.name),
         centerTitle: true,
         backgroundColor:
             themeProvider.themeData.appBarTheme.backgroundColor ??
             Colors.blueAccent,
-        actions: [
-          IconButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const RestoreListScreen(),
-                ),
-              );
-            },
-            icon: const Icon(Icons.restore, color: Colors.white),
-          ),
-          IconButton(
-            onPressed: () async {
-              await FirebaseAuth.instance.signOut();
-              Navigator.pushReplacementNamed(context, '/login');
-            },
-            icon: const Icon(Icons.logout, color: Colors.white),
+        actions: [IconButton(onPressed: () {}, icon: Icon(Icons.cookie_sharp))],
+        iconTheme: IconThemeData(color: Colors.white, size: 30),
+        elevation: 5,
+      ),
+      body: Column(
+        children: [
+          const SizedBox(height: 8),
+          Expanded(
+            child: ListView.builder(
+              itemCount: list.ingredients.length,
+              itemBuilder: (context, index) {
+                final item = list.ingredients[index];
+                return Dismissible(
+                  key: Key(item.name),
+                  background: Container(
+                    color: Colors.green,
+                    alignment: Alignment.centerLeft,
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: const Icon(Icons.check, color: Colors.white),
+                  ),
+                  secondaryBackground: Container(
+                    color: Colors.red,
+                    alignment: Alignment.centerRight,
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: const Icon(Icons.delete, color: Colors.white),
+                  ),
+                  confirmDismiss: (direction) async {
+                    _onDismissed(index, direction);
+                    return false;
+                  },
+                  child: Card(
+                    elevation: 3,
+                    color: item.isSelected ? Colors.green[50] : Colors.white,
+                    margin: const EdgeInsets.symmetric(vertical: 8),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: ListTile(
+                      title: Text(
+                        item.name,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item.desctiption,
+                            style: const TextStyle(fontSize: 14),
+                          ),
+                          Text(
+                            '${formatDouble(item.price)} XAF x ${formatDouble(item.quantity)}',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green,
+                            ),
+                          ),
+                        ],
+                      ),
+                      leading: const Icon(
+                        Icons.shopping_cart,
+                        color: Colors.blueAccent,
+                      ),
+                      trailing: Text(
+                        '${formatDouble(item.quantity * item.price)} XAF',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blueAccent,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
           ),
         ],
       ),
-      body: StreamBuilder<List<BuyList>>(
-        stream: FirestoreService().getBuyLists(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return const Center(child: Text('Erreur de chargement des listes'));
-          }
-          final lists = snapshot.data ?? [];
-          if (lists.isEmpty) {
-            return const Center(child: Text('Aucune liste disponible'));
-          }
-          return ListView.builder(
-            itemCount: lists.length,
-            itemBuilder: (context, index) {
-              final list = lists[index];
-              return Dismissible(
-                key: Key(list.id!.toString()),
-                direction: DismissDirection.endToStart,
-                background: Container(
-                  color: Colors.red,
-                  alignment: Alignment.centerRight,
-                  padding: const EdgeInsets.only(right: 20),
-                  child: const Icon(Icons.delete, color: Colors.white),
-                ),
-                confirmDismiss: (direction) async {
-                  return await showDialog<bool>(
-                    context: context,
-                    builder:
-                        (context) => AlertDialog(
-                          title: const Text('Confirmer la suppression'),
-                          content: Text(
-                            'Voulez-vous supprimer la liste "${list.name}" ?',
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context, false),
-                              child: const Text('Annuler'),
-                            ),
-                            ElevatedButton(
-                              onPressed: () => Navigator.pop(context, true),
-                              child: const Text('Supprimer'),
-                            ),
-                          ],
-                        ),
-                  );
-                },
-                onDismissed: (direction) async {
-                  await FirestoreService().deleteBuyList(list.id!.toString());
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Liste "${list.name}" supprimée')),
-                  );
-                },
-                child: ListTile(
-                  title: Text(list.name),
-                  subtitle: Text(list.description),
-                  trailing: ElevatedButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder:
-                              (context) =>
-                                  ListDetailScreen(listId: list.id!.toString()),
-                        ),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blueAccent,
-                      foregroundColor: Colors.white,
-                    ),
-                    child: const Text('Voir détails'),
-                  ),
-                ),
-              );
-            },
-          );
-        },
-      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const ItemFormScreen()),
+          final service = FirestoreService();
+          for (var item in list.ingredients) {
+            if (item.isSelected) {
+              _saveditems.add(
+                BuyItem(
+                  name: item.name,
+                  price: item.price,
+                  quantity: item.quantity,
+                ),
+              );
+            }
+          }
+          if (_saveditems.isEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Aucun article sélectionné')),
+            );
+            return;
+          }
+          if (list.name.isEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Veuillez valider le budget d\'abord'),
+              ),
+            );
+            return;
+          }
+          var generatedList = BuyList(
+            name: "generated list ${DateTime.now().millisecond}",
+            description: "preparation de ${list.name}",
+            items: _saveditems,
           );
+          service
+              .addBuyList(generatedList, _saveditems)
+              .then((value) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Liste créée avec succès')),
+                );
+                Navigator.pop(context, generatedList);
+              })
+              .catchError((error) {
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text('Erreur : $error')));
+              });
         },
         backgroundColor: Colors.blueAccent,
-        child: const Icon(Icons.add, color: Colors.white),
+        elevation: 6,
+        child: const Text('Save', style: TextStyle(color: Colors.white)),
       ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }
 }
