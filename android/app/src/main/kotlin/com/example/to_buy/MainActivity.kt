@@ -7,7 +7,6 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
-import android.os.Bundle
 import android.provider.Settings
 import android.util.Log
 import android.util.Rational
@@ -16,18 +15,47 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
-    /// A communication channel identifier used by Flutter and the native code to exchange messages. In this case, it is called storageChannel and is used for widget storage and update operations.
-    private val storageChannel = "ListifyStorageWidget"
+    // Canaux de communication
+    private val BUBBLE_CHANNEL = "com.example.to_buy/floating_bubble"
+    private val STORAGE_CHANNEL = "ListifyStorageWidget"
+    private val OVERLAY_PERMISSION_REQ_CODE = 1234
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
+        // Initialisation du stockage
         StorageHelper.initialize(context)
 
-        MethodChannel(
-            flutterEngine.dartExecutor.binaryMessenger,
-            storageChannel
-        ).setMethodCallHandler { call, result ->
+        // Configuration du canal pour la bulle flottante
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, BUBBLE_CHANNEL).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "showBubble" -> {
+                    if (checkOverlayPermission()) {
+                        startBubbleService()
+                        result.success(null)
+                    } else {
+                        result.error("PERMISSION_DENIED", "L'autorisation d'overlay est requise", null)
+                    }
+                }
+                "hideBubble" -> {
+                    stopBubbleService()
+                    result.success(null)
+                }
+                "checkOverlayPermission" -> {
+                    result.success(checkOverlayPermission())
+                }
+                "requestOverlayPermission" -> {
+                    requestOverlayPermission()
+                    result.success(null)
+                }
+                else -> {
+                    result.notImplemented()
+                }
+            }
+        }
+
+        // Configuration du canal pour le widget
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, STORAGE_CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
                 "setValue" -> {
                     val key = call.argument<String>("key")
@@ -52,6 +80,40 @@ class MainActivity : FlutterActivity() {
         }
     }
 
+    // Méthodes pour la bulle flottante
+    private fun checkOverlayPermission(): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            Settings.canDrawOverlays(this)
+        } else {
+            true
+        }
+    }
+
+    private fun requestOverlayPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
+            val intent = Intent(
+                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                Uri.parse("package:$packageName")
+            )
+            startActivityForResult(intent, OVERLAY_PERMISSION_REQ_CODE)
+        }
+    }
+
+    private fun startBubbleService() {
+        val intent = Intent(this, FloatingWidgetService::class.java)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(intent)
+        } else {
+            startService(intent)
+        }
+    }
+
+    private fun stopBubbleService() {
+        val intent = Intent(this, FloatingWidgetService::class.java)
+        stopService(intent)
+    }
+
+    // Méthodes pour le widget
     private fun updateWidget(context: Context) {
         val appWidgetManager = AppWidgetManager.getInstance(context)
         val componentName = ComponentName(context, ListifyWidget::class.java)
@@ -68,6 +130,7 @@ class MainActivity : FlutterActivity() {
         }
     }
 
+    // Méthode pour le mode Picture-in-Picture
     private fun enterPipMode() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val params = PictureInPictureParams.Builder()
@@ -84,21 +147,12 @@ class MainActivity : FlutterActivity() {
         }
     }
 
-    private fun hasOverlayPermission(): Boolean {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            Settings.canDrawOverlays(this)
-        } else {
-            true
-        }
-    }
-
-    private fun requestOverlayPermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            val intent = Intent(
-                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                Uri.parse("package:$packageName")
-            )
-            startActivityForResult(intent, 123)
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == OVERLAY_PERMISSION_REQ_CODE) {
+            if (checkOverlayPermission()) {
+                startBubbleService()
+            }
         }
     }
 }
