@@ -5,7 +5,7 @@ import 'package:to_buy/models/buy_item.dart';
 import 'package:to_buy/models/buy_list.dart';
 import 'package:to_buy/models/user.dart';
 
-const ipadressserver = "10.124.124.193";
+const ipadressserver = "10.244.39.193";
 
 class BackendServices {
   final String baseUrl =
