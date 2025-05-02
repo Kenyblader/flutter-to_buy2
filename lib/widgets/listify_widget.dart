@@ -12,7 +12,7 @@ class ListifyWidgetManager {
     // Add from here
     var buylist = fireStore.getBuyLists();
     buylist.listen((onData) {
-      print("avant home update");
+      print("avant home update ${onData.length}");
       HomeWidget.saveWidgetData<String>(
         "names",
         jsonEncode(

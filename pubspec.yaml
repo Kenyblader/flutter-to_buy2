@@ -52,13 +52,19 @@ dependencies:
   sqflite: ^2.4.2
   path: ^1.9.1
   flutter_gemini: ^3.0.0
-  flutter_overlay_window: ^0.4.3
   mapbox_maps_flutter: ^2.7.0
   flutter_map: ^8.1.1
   url_strategy: ^0.2.0
   latlong2: ^0.9.1
   geolocator: ^14.0.0
   firebase_analytics: ^11.4.5
+  uuid: ^4.5.1
+  connectivity_plus: ^6.1.4
+  flutter_overlay_window: ^0.5.0
+  flutter_sound_record: ^3.3.2
+  just_audio: ^0.10.2
+  speech_to_text: ^7.0.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

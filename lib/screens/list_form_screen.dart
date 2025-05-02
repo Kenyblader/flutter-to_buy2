@@ -36,13 +36,13 @@ class _ListFormScreenState extends State<ListFormScreen> {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Liste enregistrée avec succès !')),
             );
-            Navigator.pushAndRemoveUntil(
-              context,
-              MaterialPageRoute(
-                builder: (context) => ItemListScreen(list: list),
-              ),
-              (predicate) => false,
-            );
+            // Navigator.pushAndRemoveUntil(
+            //   context,
+            //   MaterialPageRoute(
+            //     builder: (context) => ItemListScreen(list: list),
+            //   ),
+            //   (predicate) => false,
+            // );
           })
           .catchError((error) {
             ScaffoldMessenger.of(context).showSnackBar(

@@ -37,55 +37,41 @@ class _LoginRegisterScreenState extends ConsumerState<LoginRegisterScreen> {
         errorMessage = null;
       });
       final authService = ref.read(authProvider);
-      String? error;
       if (isLogin) {
-        await authService.signInWithEmail(email, password).then((errore) {
-          print('error: $error');
-          if (error == 'invalid-credential') {
-            error = 'Identifiants invalides.';
-          } else if (errore == 'user-not-found') {
-            error = 'Aucun utilisateur trouvé avec cet email.';
-          } else if (errore == 'wrong-password') {
-            error = 'Mot de passe incorrect.';
-          } else if (errore == 'invalid-email') {
-            error = 'Email invalide.';
-          } else if (errore == 'user-disabled') {
-            error = 'Utilisateur désactivé.';
-          } else if (errore == 'operation-not-allowed') {
-            error = 'L\'opération n\'est pas autorisée.';
-          } else if (errore == 'too-many-requests') {
-            error = 'Trop de demandes. Veuillez réessayer plus tard.';
-          } else if (errore == 'network-request-failed') {
-            error = 'Échec de la demande réseau. Vérifiez votre connexion.';
-          } else if (errore == 'email-already-in-use') {
-            error = 'Cet email est déjà utilisé.';
-          } else if (errore == 'weak-password') {
-            error = 'Le mot de passe est trop faible.';
-          } else if (errore == null) {
-            // Connexion réussie
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Connexion réussie !')),
+        try {
+          final data = await authService.signInWithEmail(email, password);
+          if (data == null) {
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(builder: (context) => HomeScreen()),
+              (predicate) => false,
             );
+          } else {
+            setState(() {
+              errorMessage = data;
+            });
           }
-        });
+        } catch (e) {
+          errorMessage = 'desole erreur de connexion au serveur';
+        }
       } else {
-        error = await authService.signUpWithEmail(email, password);
-      }
-      setState(() {
-        isSubmitting = false; // Terminer la soumission
-        errorMessage = error;
-      });
-      if (error == null) {
-        // Redirection après connexion réussie
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
-          (route) => false,
-        );
-      } else if (error != null) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(error as String)));
+        try {
+          final data = await authService.signUpWithEmail(email, password);
+          if (data == null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text("inscription reussit mtn connectez vous")),
+            );
+            setState(() {
+              isLogin = true;
+            });
+          } else {
+            setState(() {
+              errorMessage = data;
+            });
+          }
+        } catch (e) {
+          errorMessage = 'erreur serveur veuiller reesayer plus tard';
+        }
       }
     }
   }

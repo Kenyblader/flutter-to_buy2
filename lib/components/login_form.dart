@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_overlay_window/flutter_overlay_window.dart';
 import 'package:to_buy/components/style_button.dart';
 import 'package:to_buy/validators/login_form_validators.dart';
 
@@ -60,53 +61,33 @@ class LoginForm extends StatelessWidget {
                 style: const TextStyle(color: Colors.red),
               ),
             ),
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 15),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Expanded(
-                  child: StyleButton(
-                    onPressed:
-                        () => onSubmit(
-                          emailController.text,
-                          passwordController.text,
-                          formKey,
-                        ),
-                    child: const Text('Connexion'),
-                  ),
+          SizedBox(height: 10),
+
+          TextButton(
+            onPressed:
+                () => onSubmit(
+                  emailController.text,
+                  passwordController.text,
+                  formKey,
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: TextButton(
-                    onPressed: goToRegister,
-                    child: const Text("Pas encore de compte ? Inscrivez-vous"),
-                  ),
-                ),
-              ],
+            style: TextButton.styleFrom(
+              backgroundColor: Colors.blueAccent,
+              elevation: 15,
+              fixedSize: Size(500, 50),
             ),
-          ),
-          const SizedBox(height: 10),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 50),
-            child: StyleButton(
-              onPressed: () {
-                // TODO: Implémenter Google Sign-In
-              },
-              backgroundColor: Colors.teal,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  Icon(
-                    Icons.g_mobiledata_outlined,
-                    color: Colors.red,
-                    size: 40,
-                  ),
-                  SizedBox(width: 10),
-                  Text("Se connecter avec Google"),
-                ],
+            child: const Text(
+              'Connexion',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
               ),
             ),
+          ),
+
+          const SizedBox(width: 10),
+          TextButton(
+            onPressed: goToRegister,
+            child: const Text("Pas encore de compte ? Inscrivez-vous"),
           ),
         ],
       ),

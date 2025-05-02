@@ -1,6 +1,11 @@
+import 'dart:developer';
+import 'dart:isolate';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_overlay_window/flutter_overlay_window.dart';
 import 'package:home_widget/home_widget.dart';
 import 'package:provider/provider.dart';
+import 'package:to_buy/floatingButton/isolate_manager.dart';
 import 'package:to_buy/models/buy_list.dart';
 import 'package:to_buy/provider/auth_provider.dart';
 import 'package:to_buy/provider/theme_provider.dart';
@@ -36,6 +41,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void initState() {
+    FlutterOverlayWindow.isActive().then((x) {
+      _isFloatingWidgetActive = x;
+    });
     super.initState();
     var list = fireSoreService.getBuyLists();
     list.listen((event) {
@@ -75,58 +83,34 @@ class _HomeScreenState extends State<HomeScreen> {
       );
       return;
     }
+    await getOverLay();
+  }
 
+  getOverLay() async {
+    if (!await FlutterOverlayWindow.isPermissionGranted()) {
+      final isPermit = await FlutterOverlayWindow.requestPermission();
+      if (isPermit == null || isPermit == false) {
+        print("Permission not granted");
+        return;
+      }
+    }
     try {
       if (_isFloatingWidgetActive) {
-        await _floatingWidgetChannel.invokeMethod('stopFloatingWidget');
-        setState(() {
-          _isFloatingWidgetActive = false;
-        });
-        print('Bouton flottant fermé');
+        await FlutterOverlayWindow.closeOverlay();
+        print("close floating button succes");
       } else {
-        final shouldProceed = await showDialog<bool>(
-          context: context,
-          builder:
-              (context) => AlertDialog(
-                title: const Text('Permission requise'),
-                content: const Text(
-                  'Pour afficher un bouton flottant par-dessus d\'autres applications, '
-                  'vous devez accorder la permission d\'affichage. Voulez-vous continuer ?',
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context, false),
-                    child: const Text('Annuler'),
-                  ),
-                ],
-              ),
+        await FlutterOverlayWindow.showOverlay(
+          enableDrag: true,
+          height: 300,
+          width: 300,
         );
-        if (shouldProceed != true) return;
-
-        if (await Permission.systemAlertWindow.request().isGranted) {
-          await _floatingWidgetChannel.invokeMethod('startFloatingWidget');
-          setState(() {
-            _isFloatingWidgetActive = true;
-          });
-          print('Bouton flottant ouvert');
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('Permission d\'affichage refusée'),
-              action: SnackBarAction(
-                label: 'Réessayer',
-                onPressed: _toggleFloatingWidget,
-              ),
-            ),
-          );
-          print('Permission refusée');
-        }
+        print("open floating button succes");
       }
-    } on PlatformException catch (e) {
-      print('Erreur : $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur : ${e.message ?? 'Erreur inconnue'}')),
-      );
+      setState(() {
+        _isFloatingWidgetActive = !_isFloatingWidgetActive;
+      });
+    } catch (e) {
+      print('Erreur floating button: $e');
     }
   }
 
@@ -245,10 +229,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 color: Colors.blueAccent,
               ),
               title: const Text('Mon Compte'),
-              onTap: () async {
-                var x = await HomeWidget.saveWidgetData("id", "string");
-                print(x);
-              },
+              onTap: () async {},
             ),
             ListTile(
               leading:
