@@ -9,6 +9,7 @@ import 'package:to_buy/screens/item_list_all_screen.dart';
 import 'package:to_buy/screens/list_detail_screen.dart';
 import 'package:to_buy/screens/login_register_screen.dart';
 import 'package:to_buy/screens/propse_menu.dart';
+import 'package:to_buy/screens/map_screen.dart';
 import 'package:to_buy/services/firestore_service.dart';
 import 'package:to_buy/widgets/listify_widget.dart';
 import 'package:flutter/services.dart';
@@ -198,6 +199,16 @@ class _HomeScreenState extends State<HomeScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => const ProposeMenu()),
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.location_on), // Added location icon
+            color: Colors.white,
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const MapScreen()),
               );
             },
           ),

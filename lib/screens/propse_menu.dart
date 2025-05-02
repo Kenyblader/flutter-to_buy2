@@ -1,9 +1,6 @@
 import 'dart:convert';
-import 'dart:math';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_gemini/flutter_gemini.dart';
 import 'package:to_buy/models/buy_item.dart';
 import 'package:to_buy/models/buy_list.dart';
 import 'package:to_buy/services/firestore_service.dart';
@@ -23,6 +20,7 @@ class _ProposeMenuState extends State<ProposeMenu> {
   final List<ElementAffich> _items = [];
   final List<BuyItem> _saveditems = [];
   String menuName = "";
+  bool _isLoading = false;
 
   DishModel? parseCustomJsonString(String jsonString) {
     try {
@@ -46,29 +44,51 @@ class _ProposeMenuState extends State<ProposeMenu> {
   }
 
   Future<void> _validateBudget() async {
+    setState(() {
+      _isLoading = true;
+    });
+
     final budget = _budgetController.text;
     if (budget.isNotEmpty) {
-      await gemin.GetMEnuByBudget(budget).then((result) {
+      try {
+        final result = await gemin.GetMEnuByBudget(budget);
         print('IA Response: $result');
+
         final parsedResult = parseCustomJsonString(result);
-        final menu = parsedResult?.name;
-        if (menu != null) {
-          final ingredients = parsedResult?.ingredients ?? [];
-          setState(() {
-            menuName = menu;
-            _items.clear();
-            _items.addAll(ingredients);
-          });
+        if (parsedResult == null) {
+          throw Exception("Impossible de traiter la réponse de l'IA");
         }
-      }).onError((error, stackTrace) {
+
+        final menu = parsedResult.name;
+        final ingredients = parsedResult.ingredients;
+
+        setState(() {
+          menuName = menu;
+          _items.clear();
+          _items.addAll(ingredients);
+          _isLoading = false;
+        });
+      } catch (error) {
+        setState(() {
+          _isLoading = false;
+        });
         print('Erreur : $error');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur : $error')),
+          SnackBar(
+            content: Text('Erreur : $error'),
+            backgroundColor: Colors.red,
+          ),
         );
-      });
+      }
     } else {
+      setState(() {
+        _isLoading = false;
+      });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Veuillez entrer un budget valide')),
+        const SnackBar(
+          content: Text('Veuillez entrer un budget valide'),
+          backgroundColor: Colors.orange,
+        ),
       );
     }
   }
@@ -83,8 +103,20 @@ class _ProposeMenuState extends State<ProposeMenu> {
     });
   }
 
+  double _calculateTotalPrice() {
+    double total = 0;
+    for (var item in _items) {
+      if (item.isSelected) {
+        total += item.price * item.quantity;
+      }
+    }
+    return total;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final double totalPrice = _calculateTotalPrice();
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Propose Menu'),
@@ -128,36 +160,85 @@ class _ProposeMenuState extends State<ProposeMenu> {
               ),
             ),
             const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _validateBudget,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blueAccent,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-              child: const Text('Valider', style: TextStyle(fontSize: 16)),
-            ),
-            const SizedBox(height: 16),
             Center(
-              child: Text(
-                menuName,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.blueAccent,
+              child: ElevatedButton(
+                onPressed: _isLoading ? null : _validateBudget,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blueAccent,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
                 ),
+                child: _isLoading
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Text('Valider', style: TextStyle(fontSize: 16)),
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 24),
+            if (menuName.isNotEmpty)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue[50],
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.blueAccent.withOpacity(0.5)),
+                ),
+                child: Column(
+                  children: [
+                    Text(
+                      menuName,
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blueAccent,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Prix total: ${formatDouble(totalPrice)} XAF',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            const SizedBox(height: 16),
+            if (_items.isNotEmpty)
+              const Padding(
+                padding: EdgeInsets.only(left: 8, bottom: 8),
+                child: Text(
+                  'Ingrédients (glissez à droite pour sélectionner, à gauche pour désélectionner):',
+                  style: TextStyle(fontSize: 14, fontStyle: FontStyle.italic),
+                ),
+              ),
             Expanded(
-              child: ListView.builder(
+              child: _items.isEmpty
+                  ? Center(
+                child: Text(
+                  menuName.isEmpty
+                      ? 'Entrez un budget pour recevoir une suggestion de menu'
+                      : 'Aucun ingrédient disponible',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey[600],
+                    fontStyle: FontStyle.italic,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              )
+                  : ListView.builder(
                 itemCount: _items.length,
                 itemBuilder: (context, index) {
                   final item = _items[index];
                   return Dismissible(
-                    key: Key(item.name),
+                    key: Key('${item.name}_$index'),
                     background: Container(
                       color: Colors.green,
                       alignment: Alignment.centerLeft,
@@ -192,7 +273,10 @@ class _ProposeMenuState extends State<ProposeMenu> {
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(item.desctiption, style: const TextStyle(fontSize: 14)),
+                            Text(
+                                item.desctiption,
+                                style: const TextStyle(fontSize: 14)
+                            ),
                             Text(
                               '${formatDouble(item.price)} XAF x ${formatDouble(item.quantity)}',
                               style: const TextStyle(
@@ -202,7 +286,10 @@ class _ProposeMenuState extends State<ProposeMenu> {
                             ),
                           ],
                         ),
-                        leading: const Icon(Icons.shopping_cart, color: Colors.blueAccent),
+                        leading: Icon(
+                          Icons.shopping_cart,
+                          color: item.isSelected ? Colors.green : Colors.blueAccent,
+                        ),
                         trailing: Text(
                           '${formatDouble(item.quantity * item.price)} XAF',
                           style: const TextStyle(
@@ -210,6 +297,11 @@ class _ProposeMenuState extends State<ProposeMenu> {
                             color: Colors.blueAccent,
                           ),
                         ),
+                        onTap: () {
+                          setState(() {
+                            item.isSelected = !item.isSelected;
+                          });
+                        },
                       ),
                     ),
                   );
@@ -219,8 +311,11 @@ class _ProposeMenuState extends State<ProposeMenu> {
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: _items.isEmpty
+          ? null
+          : FloatingActionButton.extended(
         onPressed: () {
+          _saveditems.clear();
           final service = FirestoreService();
           for (var item in _items) {
             if (item.isSelected) {
@@ -246,24 +341,31 @@ class _ProposeMenuState extends State<ProposeMenu> {
             return;
           }
           var list = BuyList(
-            name: "generated list ${DateTime.now().millisecond}",
-            description: "preparation de $menuName",
+            name: "Liste pour $menuName",
+            description: "Préparation de $menuName",
             items: _saveditems,
           );
           service.addBuyList(list, _saveditems).then((value) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Liste créée avec succès')),
+              const SnackBar(
+                content: Text('Liste créée avec succès'),
+                backgroundColor: Colors.green,
+              ),
             );
             Navigator.pop(context);
           }).catchError((error) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Erreur : $error')),
+              SnackBar(
+                content: Text('Erreur : $error'),
+                backgroundColor: Colors.red,
+              ),
             );
           });
         },
         backgroundColor: Colors.blueAccent,
         elevation: 6,
-        child: const Text('Save', style: TextStyle(color: Colors.white)),
+        icon: const Icon(Icons.save, color: Colors.white),
+        label: const Text('Enregistrer la liste', style: TextStyle(color: Colors.white)),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
@@ -295,9 +397,12 @@ class ElementAffich {
       name: json['name'],
       desctiption: json['description'],
       price: json['price'].toDouble(),
-      quantity: json['quantity'].toDouble(),
+      quantity: json['quantity'] is int
+          ? json['quantity'].toDouble()
+          : json['quantity'],
     );
   }
+
   Map<String, dynamic> toJson() {
     return {
       'name': name,

@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter/material.dart';
 import 'package:to_buy/components/style_button.dart';
 import 'package:to_buy/models/buy_item.dart';
@@ -28,6 +29,7 @@ class _ItemFormState extends State<ItemFormScreen> {
   List<BuyItem> _existingItems = [];
   Map<String, BuyItem> _existingItemsMap =
       {}; // Map pour recherche rapide par nom
+  final FirebaseAnalytics _analytics = FirebaseAnalytics.instance;
 
   @override
   void initState() {
@@ -188,6 +190,23 @@ class _ItemFormState extends State<ItemFormScreen> {
               .where((item) => item != null)
               .cast<BuyItem>()
               .toList();
+
+      // Enregistrer l'événement add_to_cart pour chaque article
+      for (var item in items) {
+        await _analytics.logAddToCart(
+          currency: 'XAF',
+          value: item.price * item.quantity,
+          items: [
+            AnalyticsEventItem(
+              itemId: item.id ?? item.name.toLowerCase(),
+              itemName: item.name,
+              itemCategory: 'Courses',
+              price: item.price,
+              quantity: item.quantity.toInt(),
+            ),
+          ],
+        );
+      }
 
       final buyList = BuyList(
         name: _nameController.text,
