@@ -27,51 +27,61 @@ class Geminservice {
       return Future.error('Budget vide');
     }
 
-    // Générer un nombre aléatoire pour encourager la variabilité
-    final random = Random().nextInt(1000);
-
     try {
       final response = await gemini.prompt(
         parts: [
           Part.text('''
-Générez un JSON valide représentant une liste d'ingrédients pour la préparation d'un plat camerounais authentique adapté au budget exact de $budget FCFA (variante #$random).
+      Générez un JSON valide représentant  une liste de plats camerounais exemple(Ndole,riz avec sauce d'arrachide,poisson braise,poulet braise,Taro,eru ......et plein d'autre a toi de choisir en fonction de la saison) avec leurs ingredients que je pourais realiser avec AVEC UN BUDGET DE $budget FCFA. L'objet doit avoir :
+      - name : le nom du plat (chaîne).
+      - ingredients : une liste d' ingrédients  neccessaire a la realisation du plat, chaque ingrédient ayant :
+        - name : nom de l'ingrédient avec precision sur le mesurage si besoin (litre,Kg,...)(chaîne).
+        - description : description de l'utilisation (chaîne).
+        - price : prix unitaire dependant de la mesure  en XAF (nombre décimal).
+        - quantity : quantité nécessaire (entier).
 
-Le plat doit être choisi parmi les plats camerounais traditionnels, en tenant compte du budget pour déterminer sa complexité :
-- Pour un petit budget (<5000 FCFA), privilégiez des plats simples avec des ingrédients abordables.
-- Pour un budget moyen (5000-10000 FCFA), optez pour des plats intermédiaires avec plus d'ingrédients.
-- Pour un budget élevé (>10000 FCFA), choisissez des plats élaborés avec des ingrédients de qualité ou en plus grande quantité.
+      NB: la somme des prix unitaire des ingrédients * la quantite doit être inférieure a  $budget Fcfa.
 
-L'objet JSON doit avoir :
-- name : le nom du plat (chaîne, unique à chaque requête, reflétant le budget).
-- ingredients : une liste d'ingrédients nécessaires à la réalisation du plat, chaque ingrédient ayant :
-  - name : nom de l'ingrédient (chaîne).
-  - description : description de l'utilisation (chaîne).
-  - price : prix en XAF (nombre décimal, basé sur les prix actuels du marché camerounais).
-  - quantity : quantité nécessaire (nombre décimal).
+      Exemple de réponse :
+      [{
+        "name": "okok sucree",
+        "ingredients": [
+          
+          {
+            "name": "Feuille d'okok",
+            "description": "Pour la marinade et la sauce",
+            "price": 1500.00,
+            "quantity": 1
+          },
+          {
+            "name": "manioc",
+            "description": "Pour l'acommpagnement",
+            "price": 1250.00,
+            "quantity": 1
+          },
+        ]
+      },
+      {
+        "name": "Ndole avec plantain",
+        "ingredients": [
+          
+          {
+            "name": "Feuille de Ndole lave(grame)",
+            "description": "au prealable les lavees avant ou si vous ne vous y connaissez pas acheter les deja lave",
+            "price": 10,
+            "quantity": 400
+          },
+          {
+            "name": "arrachides(sceau)",
+            "description": "Pour l'acommpagnement un texture plus cremeuse",
+            "price": 4500,
+            "quantity": 0.5
+          },
+        ]
+      },
+      ]
 
-NB : La somme des prix des ingrédients × la quantité doit être aussi proche que possible de $budget FCFA, sans le dépasser. Les prix doivent refléter les coûts réels au Cameroun (par exemple, oignons ~500 XAF/kg, huile ~1500 XAF/litre). Assurez-vous que le plat et les ingrédients varient à chaque requête en fonction du budget.
-
-Exemple de réponse :
-{
-  "name": "Plat Camerounais",
-  "ingredients": [
-    {
-      "name": "Oignons",
-      "description": "Pour la marinade et la sauce",
-      "price": 500.00,
-      "quantity": 2
-    },
-    {
-      "name": "Huile",
-      "description": "Pour la friture",
-      "price": 1500.00,
-      "quantity": 1
-    }
-  ]
-}
-
-Retournez uniquement le JSON, sans texte, commentaires, ou backticks. Assurez-vous que le JSON est complet et bien formé.
-'''),
+      Retournez uniquement le JSON, sans texte, commentaires, ou backticks. Assurez-vous que le JSON est complet et bien formé.
+      '''),
         ],
         generationConfig: GenerationConfig(
           temperature: 0.9, // Augmenté pour plus de variabilité
